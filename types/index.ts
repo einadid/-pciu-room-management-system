@@ -48,18 +48,22 @@ export interface TimeSlot {
 
 // 🔹 Days
 export type DayOfWeek = 
+  | 'Saturday'
   | 'Sunday' 
   | 'Monday' 
   | 'Tuesday' 
   | 'Wednesday' 
-  | 'Thursday';
+  | 'Thursday'
+  | 'Friday';
 
 export const DAYS: DayOfWeek[] = [
+  'Saturday',
   'Sunday',
   'Monday',
   'Tuesday',
   'Wednesday',
-  'Thursday'
+  'Thursday',
+  'Friday'
 ];
 
 // 🔹 Schedule

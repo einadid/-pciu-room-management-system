@@ -47,12 +47,9 @@ export function getCurrentTimeSlotId(): number | null {
 // 🔹 Check if current time is within university hours
 export function isUniversityHours(): boolean {
   const now = new Date();
-  const day = now.getDay();
   const hour = now.getHours();
   
   // Sunday=0 to Thursday=4 are class days
-  // Friday=5, Saturday=6 are off
-  if (day === 5 || day === 6) return false;
   
   // Class hours: 8:30 AM to 6:00 PM
   if (hour < 8 || hour >= 18) return false;
