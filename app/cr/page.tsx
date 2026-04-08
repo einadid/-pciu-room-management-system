@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
-import Badge from '@/components/ui/Badge';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+import Badge from "@/components/ui/Badge";
 
 export default function CRDashboard() {
   const router = useRouter();
@@ -14,19 +14,19 @@ export default function CRDashboard() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    const token = localStorage.getItem('access_token');
+    const userData = localStorage.getItem("user");
+    const token = localStorage.getItem("access_token");
 
     if (!userData || !token) {
-      router.replace('/login');
+      router.replace("/login");
       return;
     }
 
     try {
       const parsedUser = JSON.parse(userData);
-      
-      if (parsedUser.role !== 'cr') {
-        router.replace('/login');
+
+      if (parsedUser.role !== "cr") {
+        router.replace("/login");
         return;
       }
 
@@ -34,7 +34,7 @@ export default function CRDashboard() {
       fetchSchedules(parsedUser, token);
     } catch (err) {
       localStorage.clear();
-      router.replace('/login');
+      router.replace("/login");
     }
   }, [router]);
 
@@ -42,10 +42,11 @@ export default function CRDashboard() {
     try {
       let url = `/api/schedules?department=${userData.department}`;
       if (userData.batch_name) url += `&batch_name=${userData.batch_name}`;
-      if (userData.section_name) url += `&section_name=${userData.section_name}`;
+      if (userData.section_name)
+        url += `&section_name=${userData.section_name}`;
 
       const res = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const data = await res.json();
@@ -53,29 +54,35 @@ export default function CRDashboard() {
         setSchedules(data.data);
       }
     } catch (err) {
-      console.error('Failed to fetch schedules:', err);
+      console.error("Failed to fetch schedules:", err);
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteAll = async () => {
-    const semesterName = prompt('Enter semester name for archive (e.g., "Fall 2024"):');
+    const semesterName = prompt(
+      'Enter semester name for archive (e.g., "Fall 2024"):',
+    );
     if (!semesterName) return;
 
-    if (!confirm(`⚠️ Are you sure you want to archive and delete ALL ${schedules.length} schedules?\n\nThis will:\n1. Archive schedules as "${semesterName}"\n2. Delete all current schedules\n\nThis cannot be undone!`)) {
+    if (
+      !confirm(
+        `⚠️ Are you sure you want to archive and delete ALL ${schedules.length} schedules?\n\nThis will:\n1. Archive schedules as "${semesterName}"\n2. Delete all current schedules\n\nThis cannot be undone!`,
+      )
+    ) {
       return;
     }
 
     setDeleting(true);
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem("access_token");
 
     try {
-      const res = await fetch('/api/schedules/archive-all', {
-        method: 'POST',
+      const res = await fetch("/api/schedules/archive-all", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           department: user.department,
@@ -88,13 +95,15 @@ export default function CRDashboard() {
       const data = await res.json();
 
       if (data.success) {
-        alert(`✅ ${data.archived_count} schedules archived and deleted successfully!`);
+        alert(
+          `✅ ${data.data?.archived_count || schedules.length} schedules archived and deleted successfully!`,
+        );
         setSchedules([]);
       } else {
-        alert('❌ Failed: ' + data.error);
+        alert("❌ Failed: " + data.error);
       }
     } catch (err) {
-      alert('❌ Network error');
+      alert("❌ Network error");
     } finally {
       setDeleting(false);
     }
@@ -102,7 +111,7 @@ export default function CRDashboard() {
 
   const handleLogout = () => {
     localStorage.clear();
-    router.replace('/login');
+    router.replace("/login");
   };
 
   if (loading) {
@@ -126,7 +135,9 @@ export default function CRDashboard() {
           <div className="flex flex-wrap gap-2">
             <Badge variant="default">{user.department}</Badge>
             {user.batch_name && <Badge variant="lab">{user.batch_name}</Badge>}
-            {user.section_name && <Badge variant="classroom">Section {user.section_name}</Badge>}
+            {user.section_name && (
+              <Badge variant="classroom">Section {user.section_name}</Badge>
+            )}
           </div>
         </div>
         <Button variant="danger" onClick={handleLogout}>
@@ -138,36 +149,46 @@ export default function CRDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <Card>
           <div className="text-center">
-            <div className="text-3xl font-bold text-blue-600">{schedules.length}</div>
+            <div className="text-3xl font-bold text-blue-600">
+              {schedules.length}
+            </div>
             <div className="text-sm text-gray-500">Total Classes</div>
           </div>
         </Card>
         <Card>
           <div className="text-center">
-            <div className="text-lg font-bold text-green-600">{user.department}</div>
+            <div className="text-lg font-bold text-green-600">
+              {user.department}
+            </div>
             <div className="text-sm text-gray-500">Department</div>
           </div>
         </Card>
         <Card>
           <div className="text-center">
-            <div className="text-lg font-bold text-purple-600">{user.batch_name || 'N/A'}</div>
+            <div className="text-lg font-bold text-purple-600">
+              {user.batch_name || "N/A"}
+            </div>
             <div className="text-sm text-gray-500">Batch</div>
           </div>
         </Card>
         <Card>
           <div className="text-center">
-            <div className="text-lg font-bold text-orange-600">{user.section_name || 'N/A'}</div>
+            <div className="text-lg font-bold text-orange-600">
+              {user.section_name || "N/A"}
+            </div>
             <div className="text-sm text-gray-500">Section</div>
           </div>
         </Card>
       </div>
 
       {/* Quick Actions */}
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+      <h2 className="text-xl font-semibold text-gray-900 mb-4">
+        Quick Actions
+      </h2>
       <div className="grid md:grid-cols-4 gap-4 mb-8">
-        <Card 
+        <Card
           className="hover:border-blue-400 hover:shadow-md transition-all"
-          onClick={() => router.push('/cr/add-schedule')}
+          onClick={() => router.push("/cr/add-schedule")}
         >
           <div className="text-center py-2">
             <div className="text-4xl mb-2">➕</div>
@@ -176,20 +197,22 @@ export default function CRDashboard() {
           </div>
         </Card>
 
-        <Card 
+        <Card
           className="hover:border-green-400 hover:shadow-md transition-all"
-          onClick={() => router.push('/cr/schedules')}
+          onClick={() => router.push("/cr/schedules")}
         >
           <div className="text-center py-2">
             <div className="text-4xl mb-2">📋</div>
             <h3 className="font-semibold text-gray-900">My Schedules</h3>
-            <p className="text-xs text-gray-500 mt-1">{schedules.length} classes</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {schedules.length} classes
+            </p>
           </div>
         </Card>
 
-        <Card 
+        <Card
           className="hover:border-purple-400 hover:shadow-md transition-all"
-          onClick={() => router.push('/check-room')}
+          onClick={() => router.push("/check-room")}
         >
           <div className="text-center py-2">
             <div className="text-4xl mb-2">🔍</div>
@@ -198,9 +221,9 @@ export default function CRDashboard() {
           </div>
         </Card>
 
-        <Card 
+        <Card
           className="hover:border-cyan-400 hover:shadow-md transition-all"
-          onClick={() => router.push('/routine')}
+          onClick={() => router.push("/routine")}
         >
           <div className="text-center py-2">
             <div className="text-4xl mb-2">📅</div>
@@ -216,7 +239,8 @@ export default function CRDashboard() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <p className="text-gray-700">
-                Archive and delete all <strong>{schedules.length}</strong> schedules for new semester.
+                Archive and delete all <strong>{schedules.length}</strong>{" "}
+                schedules for new semester.
               </p>
               <p className="text-sm text-gray-500 mt-1">
                 Archived routines can be viewed in "Previous Routines"
@@ -238,9 +262,13 @@ export default function CRDashboard() {
         {schedules.length === 0 ? (
           <div className="text-center py-8">
             <div className="text-6xl mb-4">📝</div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Classes Yet</h3>
-            <p className="text-gray-500 mb-4">Start by adding your first class schedule</p>
-            <Button onClick={() => router.push('/cr/add-schedule')}>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No Classes Yet
+            </h3>
+            <p className="text-gray-500 mb-4">
+              Start by adding your first class schedule
+            </p>
+            <Button onClick={() => router.push("/cr/add-schedule")}>
               ➕ Add First Class
             </Button>
           </div>
@@ -249,18 +277,32 @@ export default function CRDashboard() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Course</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Day</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Room</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Course
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Day
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Time
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Room
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {schedules.slice(0, 5).map((schedule) => (
                   <tr key={schedule.id}>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{schedule.course_name}</div>
-                      {schedule.course_code && <div className="text-xs text-gray-500">{schedule.course_code}</div>}
+                      <div className="text-sm font-medium text-gray-900">
+                        {schedule.course_name}
+                      </div>
+                      {schedule.course_code && (
+                        <div className="text-xs text-gray-500">
+                          {schedule.course_code}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
                       {schedule.day_of_week}
@@ -269,7 +311,9 @@ export default function CRDashboard() {
                       {schedule.time_slots?.slot_name}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <Badge variant="classroom">{schedule.rooms?.room_name}</Badge>
+                      <Badge variant="classroom">
+                        {schedule.rooms?.room_name}
+                      </Badge>
                     </td>
                   </tr>
                 ))}
@@ -277,7 +321,10 @@ export default function CRDashboard() {
             </table>
             {schedules.length > 5 && (
               <div className="text-center py-3 border-t">
-                <Button variant="secondary" onClick={() => router.push('/cr/schedules')}>
+                <Button
+                  variant="secondary"
+                  onClick={() => router.push("/cr/schedules")}
+                >
                   View All {schedules.length} Classes →
                 </Button>
               </div>

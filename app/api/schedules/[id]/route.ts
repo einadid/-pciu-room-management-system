@@ -5,9 +5,11 @@ import { ApiResponse } from '@/types';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+    
     const authHeader = request.headers.get('authorization');
     const token = extractTokenFromHeader(authHeader);
 
@@ -26,7 +28,7 @@ export async function DELETE(
       }, { status: 401 });
     }
 
-    const scheduleId = parseInt(params.id);
+    const scheduleId = parseInt(id);
 
     // Get schedule to check ownership
     const { data: schedule } = await supabase
@@ -43,7 +45,7 @@ export async function DELETE(
     }
 
     // Only allow deletion if user created it or is admin
-    if (payload.role !== 'admin' && schedule.created_by !== payload.userId) {
+    if (payload.role !== 'admin' && payload.role !== 'superadmin' && schedule.created_by !== payload.userId) {
       return NextResponse.json<ApiResponse>({
         success: false,
         error: 'Not authorized to delete this schedule'

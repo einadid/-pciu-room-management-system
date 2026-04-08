@@ -6,9 +6,11 @@ import { ApiResponse } from '@/types';
 // Update feedback status
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+    
     const authHeader = request.headers.get('authorization');
     const token = extractTokenFromHeader(authHeader);
 
@@ -28,7 +30,7 @@ export async function PATCH(
     }
 
     const { status } = await request.json();
-    const feedbackId = parseInt(params.id);
+    const feedbackId = parseInt(id);
 
     const { data, error } = await supabase
       .from('feedback')
@@ -59,9 +61,11 @@ export async function PATCH(
 // Delete feedback
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+    
     const authHeader = request.headers.get('authorization');
     const token = extractTokenFromHeader(authHeader);
 
@@ -80,7 +84,7 @@ export async function DELETE(
       }, { status: 403 });
     }
 
-    const feedbackId = parseInt(params.id);
+    const feedbackId = parseInt(id);
 
     const { error } = await supabase
       .from('feedback')

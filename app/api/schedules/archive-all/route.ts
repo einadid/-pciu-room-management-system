@@ -97,9 +97,11 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    return NextResponse.json<ApiResponse>({
+    return NextResponse.json<ApiResponse<{ archived_count: number }>>({
       success: true,
-      archived_count: schedules.length,
+      data: {
+        archived_count: schedules.length
+      },
       message: `${schedules.length} schedules archived and deleted`
     }, { status: 200 });
 

@@ -5,9 +5,11 @@ import { ApiResponse } from '@/types';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: userId } = await params;
+    
     const authHeader = request.headers.get('authorization');
     const token = extractTokenFromHeader(authHeader);
 
@@ -25,8 +27,6 @@ export async function DELETE(
         error: 'Admin access required'
       }, { status: 403 });
     }
-
-    const userId = params.id;
 
     // Prevent deleting yourself
     if (userId === payload.userId) {
