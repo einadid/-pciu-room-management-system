@@ -3,7 +3,7 @@ import { supabase } from '@/lib/db';
 import { verifyToken, extractTokenFromHeader, isAdmin } from '@/lib/auth';
 import { ApiResponse } from '@/types';
 
-// Get all users (admin only)
+// Get all users
 export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
@@ -26,18 +26,7 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('users')
-      .select(`
-        *,
-        batches (
-          id,
-          batch_name,
-          year
-        ),
-        sections (
-          id,
-          section_name
-        )
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -60,7 +49,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Create new user (admin only)
+// Create new user
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
@@ -81,13 +70,13 @@ export async function POST(request: NextRequest) {
       }, { status: 403 });
     }
 
-    const { name, email, department, token_id, role, batch_id, section_id } = await request.json();
+    const { name, email, department, token_id, role, batch_name, section_name } = await request.json();
 
     // Validation
     if (!name || !email || !department || !token_id) {
       return NextResponse.json<ApiResponse>({
         success: false,
-        error: 'All fields are required'
+        error: 'Name, email, department, and token are required'
       }, { status: 400 });
     }
 
@@ -95,7 +84,7 @@ export async function POST(request: NextRequest) {
     const { data: existing } = await supabase
       .from('users')
       .select('id')
-      .eq('token_id', token_id)
+      .eq('token_id', token_id.toUpperCase())
       .single();
 
     if (existing) {
@@ -114,8 +103,8 @@ export async function POST(request: NextRequest) {
         department,
         token_id: token_id.toUpperCase(),
         role: role || 'cr',
-        batch_id: batch_id || null,
-        section_id: section_id || null,
+        batch_name: batch_name || null,
+        section_name: section_name || null,
       }])
       .select();
 

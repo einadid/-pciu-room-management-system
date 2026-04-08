@@ -6,15 +6,14 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
-import { TimeSlot, RoomWithType, DayOfWeek, DAYS, User, Batch, Section } from '@/types';
+import Badge from '@/components/ui/Badge';
+import { TimeSlot, RoomWithType, DayOfWeek, DAYS } from '@/types';
 
 export default function AddSchedulePage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [rooms, setRooms] = useState<RoomWithType[]>([]);
-  const [batches, setBatches] = useState<Batch[]>([]);
-  const [sections, setSections] = useState<Section[]>([]);
 
   const [formData, setFormData] = useState({
     room_id: '',
@@ -23,74 +22,53 @@ export default function AddSchedulePage() {
     teacher_name: '',
     day_of_week: '' as DayOfWeek | '',
     time_slot_id: '',
-    batch_id: '',
-    section_id: '',
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
-    // Check authentication
     const userData = localStorage.getItem('user');
     const token = localStorage.getItem('access_token');
 
     if (!userData || !token) {
-      router.push('/login');
+      router.replace('/login');
       return;
     }
 
-    const parsedUser = JSON.parse(userData);
-    
-    if (parsedUser.role !== 'cr') {
-      router.push('/admin');
-      return;
-    }
+    try {
+      const parsedUser = JSON.parse(userData);
+      
+      if (parsedUser.role !== 'cr') {
+        router.replace('/login');
+        return;
+      }
 
-    setUser(parsedUser);
-    fetchData(parsedUser.department);
+      setUser(parsedUser);
+      fetchData();
+      setCheckingAuth(false);
+    } catch (err) {
+      localStorage.clear();
+      router.replace('/login');
+    }
   }, [router]);
 
-  // Fetch sections when batch changes
-  useEffect(() => {
-    if (formData.batch_id) {
-      fetchSections(parseInt(formData.batch_id));
-    } else {
-      setSections([]);
-      setFormData(prev => ({ ...prev, section_id: '' }));
-    }
-  }, [formData.batch_id]);
-
-  const fetchData = async (department: string) => {
+  const fetchData = async () => {
     try {
-      const [slotsRes, roomsRes, batchesRes] = await Promise.all([
+      const [slotsRes, roomsRes] = await Promise.all([
         fetch('/api/time-slots'),
         fetch('/api/rooms'),
-        fetch(`/api/batches?department=${department}`),
       ]);
 
       const slotsData = await slotsRes.json();
       const roomsData = await roomsRes.json();
-      const batchesData = await batchesRes.json();
 
       if (slotsData.success) setTimeSlots(slotsData.data);
       if (roomsData.success) setRooms(roomsData.data);
-      if (batchesData.success) setBatches(batchesData.data);
     } catch (err) {
       console.error('Failed to fetch data:', err);
-    }
-  };
-
-  const fetchSections = async (batchId: number) => {
-    try {
-      const res = await fetch(`/api/sections?batch_id=${batchId}`);
-      const data = await res.json();
-      if (data.success) {
-        setSections(data.data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch sections:', err);
     }
   };
 
@@ -113,9 +91,9 @@ export default function AddSchedulePage() {
           ...formData,
           room_id: Number(formData.room_id),
           time_slot_id: Number(formData.time_slot_id),
-          batch_id: formData.batch_id ? Number(formData.batch_id) : null,
-          section_id: formData.section_id ? Number(formData.section_id) : null,
           department: user?.department,
+          batch_name: user?.batch_name,
+          section_name: user?.section_name,
         }),
       });
 
@@ -130,13 +108,11 @@ export default function AddSchedulePage() {
           teacher_name: '',
           day_of_week: '',
           time_slot_id: '',
-          batch_id: '',
-          section_id: '',
         });
 
         setTimeout(() => {
-          router.push('/cr');
-        }, 2000);
+          router.push('/cr/schedules');
+        }, 1500);
       } else {
         setError(data.error || 'Failed to create schedule');
       }
@@ -147,22 +123,33 @@ export default function AddSchedulePage() {
     }
   };
 
+  if (checkingAuth) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       <div className="mb-6">
-        <Button
-          variant="secondary"
-          onClick={() => router.push('/cr')}
-          size="sm"
-        >
+        <Button variant="secondary" onClick={() => router.push('/cr')}>
           ← Back to Dashboard
         </Button>
       </div>
 
-      <Card 
-        title="➕ Add New Class Schedule" 
-        subtitle={`${user?.department} Department`}
-      >
+      <Card title="➕ Add New Class Schedule">
+        {/* User Info Banner */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <h4 className="font-medium text-blue-900 mb-2">Adding schedule for:</h4>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="default">{user?.department}</Badge>
+            <Badge variant="lab">{user?.batch_name || 'No Batch'}</Badge>
+            <Badge variant="classroom">Section {user?.section_name || 'N/A'}</Badge>
+          </div>
+        </div>
+
         {success && (
           <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
             ✅ Schedule created successfully! Redirecting...
@@ -171,46 +158,11 @@ export default function AddSchedulePage() {
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            {error}
+            ❌ {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Batch & Section Selection */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-blue-900 mb-3">
-              👥 Batch & Section
-            </h3>
-            <div className="grid md:grid-cols-2 gap-4">
-              <Select
-                label="Batch *"
-                value={formData.batch_id}
-                onChange={(e) => setFormData({ ...formData, batch_id: e.target.value })}
-                options={batches.map((batch) => ({
-                  value: batch.id,
-                  label: `${batch.batch_name} (${batch.year})`,
-                }))}
-                placeholder="Select batch"
-                required
-              />
-
-              {formData.batch_id && (
-                <Select
-                  label="Section *"
-                  value={formData.section_id}
-                  onChange={(e) => setFormData({ ...formData, section_id: e.target.value })}
-                  options={sections.map((section) => ({
-                    value: section.id,
-                    label: `Section ${section.section_name}`,
-                  }))}
-                  placeholder="Select section"
-                  required
-                />
-              )}
-            </div>
-          </div>
-
-          {/* Course Details */}
           <div className="grid md:grid-cols-2 gap-4">
             <Input
               label="Course Name *"
@@ -230,12 +182,11 @@ export default function AddSchedulePage() {
 
           <Input
             label="Teacher Name"
-            placeholder="e.g., Dr. John Doe"
+            placeholder="e.g., Dr. Ahmed Hassan"
             value={formData.teacher_name}
             onChange={(e) => setFormData({ ...formData, teacher_name: e.target.value })}
           />
 
-          {/* Day & Time */}
           <div className="grid md:grid-cols-2 gap-4">
             <Select
               label="Day *"
@@ -263,7 +214,7 @@ export default function AddSchedulePage() {
             onChange={(e) => setFormData({ ...formData, room_id: e.target.value })}
             options={rooms.map((room) => ({
               value: room.id,
-              label: `${room.room_name} - ${room.building} (${room.room_types.type_name})`,
+              label: `${room.room_name} - ${room.building} (${room.room_types?.type_name || 'Room'})`,
             }))}
             required
           />
@@ -273,7 +224,6 @@ export default function AddSchedulePage() {
               type="submit"
               isLoading={loading}
               className="flex-1"
-              disabled={!formData.batch_id || !formData.section_id}
             >
               Create Schedule
             </Button>
@@ -282,7 +232,6 @@ export default function AddSchedulePage() {
               type="button"
               variant="secondary"
               onClick={() => router.push('/cr')}
-              disabled={loading}
             >
               Cancel
             </Button>

@@ -1,58 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/db';
 import { verifyToken, extractTokenFromHeader } from '@/lib/auth';
-import { ApiResponse, ScheduleWithDetails } from '@/types';
+import { ApiResponse } from '@/types';
 
-// ✅ Get schedules (with filters)
+// Get schedules
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const day = searchParams.get('day');
     const room_id = searchParams.get('room_id');
     const department = searchParams.get('department');
-    const batch_id = searchParams.get('batch_id');
-    const section_id = searchParams.get('section_id');
+    const batch_name = searchParams.get('batch_name');
+    const section_name = searchParams.get('section_name');
 
     let query = supabase
       .from('schedules')
       .select(`
         *,
-        rooms (
-          id,
-          room_name,
-          building
-        ),
-        time_slots (
-          id,
-          start_time,
-          end_time,
-          slot_name
-        ),
-        users (
-          id,
-          name,
-          role
-        ),
-        batches (
-          id,
-          batch_name,
-          department,
-          year
-        ),
-        sections (
-          id,
-          section_name,
-          total_students
-        )
+        rooms (id, room_name, building),
+        time_slots (id, start_time, end_time, slot_name),
+        users (id, name)
       `)
-      .order('day_of_week', { ascending: true })
-      .order('time_slot_id', { ascending: true });
+      .order('day_of_week')
+      .order('time_slot_id');
 
     if (day) query = query.eq('day_of_week', day);
     if (room_id) query = query.eq('room_id', parseInt(room_id));
     if (department) query = query.eq('department', department);
-    if (batch_id) query = query.eq('batch_id', parseInt(batch_id));
-    if (section_id) query = query.eq('section_id', parseInt(section_id));
+    if (batch_name) query = query.eq('batch_name', batch_name);
+    if (section_name) query = query.eq('section_name', section_name);
 
     const { data, error } = await query;
 
@@ -63,13 +39,12 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
-    return NextResponse.json<ApiResponse<ScheduleWithDetails[]>>({
+    return NextResponse.json<ApiResponse>({
       success: true,
-      data: data as ScheduleWithDetails[]
+      data
     }, { status: 200 });
 
   } catch (error) {
-    console.error('Get schedules error:', error);
     return NextResponse.json<ApiResponse>({
       success: false,
       error: 'Internal server error'
@@ -77,10 +52,9 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// ✅ Create new schedule (CR only)
+// Create schedule
 export async function POST(request: NextRequest) {
   try {
-    // Authentication
     const authHeader = request.headers.get('authorization');
     const token = extractTokenFromHeader(authHeader);
 
@@ -99,8 +73,7 @@ export async function POST(request: NextRequest) {
       }, { status: 401 });
     }
 
-    // Get request data
-    const scheduleData = await request.json();
+    const body = await request.json();
     const {
       room_id,
       course_name,
@@ -109,9 +82,9 @@ export async function POST(request: NextRequest) {
       department,
       day_of_week,
       time_slot_id,
-      batch_id,
-      section_id,
-    } = scheduleData;
+      batch_name,
+      section_name,
+    } = body;
 
     // Validation
     if (!room_id || !course_name || !department || !day_of_week || !time_slot_id) {
@@ -122,22 +95,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for conflicts
-    const { data: existingSchedule } = await supabase
+    const { data: existing } = await supabase
       .from('schedules')
-      .select('*')
+      .select('id')
       .eq('room_id', room_id)
       .eq('day_of_week', day_of_week)
       .eq('time_slot_id', time_slot_id)
       .single();
 
-    if (existingSchedule) {
+    if (existing) {
       return NextResponse.json<ApiResponse>({
         success: false,
         error: 'Room is already booked for this time slot'
       }, { status: 409 });
     }
 
-    // Insert schedule
+    // Insert
     const { data, error } = await supabase
       .from('schedules')
       .insert([{
@@ -148,8 +121,8 @@ export async function POST(request: NextRequest) {
         department,
         day_of_week,
         time_slot_id,
-        batch_id,
-        section_id,
+        batch_name,
+        section_name,
         created_by: payload.userId
       }])
       .select();
@@ -161,13 +134,6 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Auto-assign room ownership
-    await supabase
-      .from('room_ownership')
-      .upsert([{ room_id, department }], {
-        onConflict: 'room_id,department'
-      });
-
     return NextResponse.json<ApiResponse>({
       success: true,
       data,
@@ -175,7 +141,6 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
 
   } catch (error) {
-    console.error('Create schedule error:', error);
     return NextResponse.json<ApiResponse>({
       success: false,
       error: 'Internal server error'

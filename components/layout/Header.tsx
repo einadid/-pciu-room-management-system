@@ -36,37 +36,7 @@ export default function Header() {
 
   return (
     <header className="bg-white sticky top-0 z-50 shadow-sm">
-      {/* Top Bar */}
-      <div className="bg-blue-900 text-white py-2">
-        <div className="max-w-7xl mx-auto px-4 flex justify-between items-center text-sm">
-          <div className="flex items-center gap-4">
-            <span className="hidden sm:block">📧 info@pciu.ac.bd</span>
-            <span>📞 +880-XXX-XXXXXX</span>
-          </div>
-          <div>
-            {user ? (
-              <div className="flex items-center gap-3">
-                <Link 
-                  href={user.role === 'cr' ? '/cr' : '/admin'}
-                  className="hover:text-blue-200"
-                >
-                  👤 {user.name}
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="px-2 py-1 bg-red-500 hover:bg-red-600 rounded text-xs"
-                >
-                  Logout
-                </button>
-              </div>
-            ) : (
-              <Link href="/login" className="hover:text-blue-200">
-                🔐 Login
-              </Link>
-            )}
-          </div>
-        </div>
-      </div>
+   
 
       {/* Main Header */}
       <div className="border-b border-gray-200">

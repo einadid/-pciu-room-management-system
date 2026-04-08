@@ -5,16 +5,21 @@ interface CardProps {
   className?: string;
   title?: string;
   subtitle?: string;
+  onClick?: () => void;
 }
 
 export default function Card({ 
   children, 
   className = '', 
   title, 
-  subtitle 
+  subtitle,
+  onClick
 }: CardProps) {
   return (
-    <div className={`bg-white rounded-xl border border-gray-200 shadow-sm ${className}`}>
+    <div 
+      className={`bg-white rounded-xl border border-gray-200 shadow-sm ${onClick ? 'cursor-pointer' : ''} ${className}`}
+      onClick={onClick}
+    >
       {(title || subtitle) && (
         <div className="px-6 py-4 border-b border-gray-100">
           {title && (

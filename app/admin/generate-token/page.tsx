@@ -11,35 +11,40 @@ import { generateTokenId } from '@/lib/utils';
 
 export default function GenerateTokenPage() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState<string | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     department: '',
+    batch_name: '',
+    section_name: '',
     token_id: '',
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check authentication
     const userData = localStorage.getItem('user');
-    const token = localStorage.getItem('access_token');
-
-    if (!userData || !token) {
-      router.push('/login');
+    if (!userData) {
+      router.replace('/login');
       return;
     }
 
-    const parsedUser = JSON.parse(userData);
-    
-    if (parsedUser.role !== 'admin') {
-      router.push('/cr');
+    try {
+      const user = JSON.parse(userData);
+      if (user.role !== 'admin' && user.role !== 'superadmin') {
+        router.replace('/login');
+        return;
+      }
+    } catch (err) {
+      router.replace('/login');
       return;
     }
 
-    // Generate initial token
     setFormData(prev => ({ ...prev, token_id: generateTokenId() }));
+    setCheckingAuth(false);
   }, [router]);
 
   const regenerateToken = () => {
@@ -75,6 +80,8 @@ export default function GenerateTokenPage() {
           name: '',
           email: '',
           department: '',
+          batch_name: '',
+          section_name: '',
           token_id: generateTokenId(),
         });
       } else {
@@ -87,14 +94,18 @@ export default function GenerateTokenPage() {
     }
   };
 
+  if (checkingAuth) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="mb-6">
-        <Button
-          variant="secondary"
-          onClick={() => router.push('/admin')}
-          size="sm"
-        >
+        <Button variant="secondary" onClick={() => router.push('/admin')}>
           ← Back to Dashboard
         </Button>
       </div>
@@ -126,7 +137,7 @@ export default function GenerateTokenPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <Input
             label="CR Name *"
-            placeholder="e.g., John Doe"
+            placeholder="e.g., Abdullah Rahman"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             required
@@ -135,7 +146,7 @@ export default function GenerateTokenPage() {
           <Input
             label="Email *"
             type="email"
-            placeholder="e.g., john@pciu.ac.bd"
+            placeholder="e.g., abdullah@pciu.ac.bd"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             required
@@ -149,6 +160,31 @@ export default function GenerateTokenPage() {
             required
           />
 
+          <div className="grid md:grid-cols-2 gap-4">
+            <Input
+              label="Batch *"
+              placeholder="e.g., Batch 30, 57th, 2024"
+              value={formData.batch_name}
+              onChange={(e) => setFormData({ ...formData, batch_name: e.target.value })}
+              required
+            />
+
+            <Select
+              label="Section *"
+              value={formData.section_name}
+              onChange={(e) => setFormData({ ...formData, section_name: e.target.value })}
+              options={[
+                { value: 'A', label: 'Section A' },
+                { value: 'B', label: 'Section B' },
+                { value: 'C', label: 'Section C' },
+                { value: 'D', label: 'Section D' },
+                { value: 'E', label: 'Section E' },
+                { value: 'F', label: 'Section F' },
+              ]}
+              required
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Generated Token ID *
@@ -160,17 +196,10 @@ export default function GenerateTokenPage() {
                 readOnly
                 className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 font-mono text-lg"
               />
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={regenerateToken}
-              >
-                🔄 Regenerate
+              <Button type="button" variant="secondary" onClick={regenerateToken}>
+                🔄
               </Button>
             </div>
-            <p className="mt-1 text-sm text-gray-500">
-              This token will be used by the CR to login
-            </p>
           </div>
 
           <div className="flex gap-4 pt-4">
@@ -178,6 +207,7 @@ export default function GenerateTokenPage() {
               type="submit"
               isLoading={loading}
               className="flex-1"
+              disabled={!formData.department || !formData.batch_name || !formData.section_name}
             >
               Create CR Account
             </Button>
@@ -186,7 +216,6 @@ export default function GenerateTokenPage() {
               type="button"
               variant="secondary"
               onClick={() => router.push('/admin')}
-              disabled={loading}
             >
               Cancel
             </Button>
