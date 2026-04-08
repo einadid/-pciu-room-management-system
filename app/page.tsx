@@ -1,28 +1,29 @@
-import Link from 'next/link';
-import Card from '@/components/ui/Card';
+import Link from "next/link";
+import Card from "@/components/ui/Card";
 
 export default function HomePage() {
   const features = [
     {
-      title: 'Check Room Availability',
-      description: 'Find free rooms instantly by selecting day and time slot',
-      href: '/check-room',
-      icon: '🔍',
-      color: 'bg-blue-50 hover:bg-blue-100',
+      title: "Check Room Availability",
+      description: "Find free rooms instantly by selecting day and time slot",
+      href: "/check-room",
+      icon: "🔍",
+      color: "bg-blue-50 hover:bg-blue-100",
     },
     {
-      title: 'CR Login',
-      description: 'Class Representatives can manage their department schedules',
-      href: '/login',
-      icon: '👤',
-      color: 'bg-green-50 hover:bg-green-100',
+      title: "CR Login",
+      description:
+        "Class Representatives can manage their department schedules",
+      href: "/login",
+      icon: "👤",
+      color: "bg-green-50 hover:bg-green-100",
     },
     {
-      title: 'View All Rooms',
-      description: 'Browse complete list of rooms with their details',
-      href: '/rooms',
-      icon: '🏫',
-      color: 'bg-purple-50 hover:bg-purple-100',
+      title: "View All Rooms",
+      description: "Browse complete list of rooms with their details",
+      href: "/rooms",
+      icon: "🏫",
+      color: "bg-purple-50 hover:bg-purple-100",
     },
   ];
 
@@ -34,8 +35,8 @@ export default function HomePage() {
           PCIU Room Management System
         </h1>
         <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          Find available classrooms and labs instantly. 
-          Manage schedules efficiently.
+          Find available classrooms and labs instantly. Manage schedules
+          efficiently.
         </p>
       </div>
 
@@ -54,7 +55,7 @@ export default function HomePage() {
           <div className="text-sm text-gray-500 mt-1">Lab Rooms</div>
         </Card>
         <Card className="text-center">
-          <div className="text-3xl font-bold text-orange-600">5</div>
+          <div className="text-3xl font-bold text-orange-600">7</div>
           <div className="text-sm text-gray-500 mt-1">Days/Week</div>
         </Card>
       </div>
@@ -63,7 +64,9 @@ export default function HomePage() {
       <div className="grid md:grid-cols-3 gap-6">
         {features.map((feature) => (
           <Link key={feature.href} href={feature.href}>
-            <div className={`${feature.color} rounded-xl p-6 transition-all duration-200 border border-transparent hover:border-gray-200 h-full`}>
+            <div
+              className={`${feature.color} rounded-xl p-6 transition-all duration-200 border border-transparent hover:border-gray-200 h-full`}
+            >
               <div className="text-4xl mb-4">{feature.icon}</div>
               <h2 className="text-xl font-semibold text-gray-900 mb-2">
                 {feature.title}
