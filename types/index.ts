@@ -163,3 +163,67 @@ export const DEPARTMENTS = [
 ] as const;
 
 export type Department = typeof DEPARTMENTS[number];
+
+// 🔹 Batch
+export interface Batch {
+  id: number;
+  batch_name: string;
+  department: string;
+  year: number;
+  semester: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+// 🔹 Section
+export interface Section {
+  id: number;
+  batch_id: number;
+  section_name: string;
+  total_students: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+// 🔹 Batch with Sections
+export interface BatchWithSections extends Batch {
+  sections: Section[];
+}
+
+// 🔹 Update Schedule interface
+export interface Schedule {
+  id: number;
+  room_id: number;
+  course_name: string;
+  course_code: string | null;
+  teacher_name: string | null;
+  department: string;
+  day_of_week: DayOfWeek;
+  time_slot_id: number;
+  batch_id: number | null;          // NEW
+  section_id: number | null;        // NEW
+  created_by: string;
+  created_at: string;
+}
+
+// 🔹 Schedule with all details
+export interface ScheduleWithDetails extends Schedule {
+  rooms: Room;
+  time_slots: TimeSlot;
+  users: User;
+  batches?: Batch;                  // NEW
+  sections?: Section;               // NEW
+}
+
+// 🔹 Update User interface
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  token_id: string | null;
+  department: string | null;
+  batch_id: number | null;          // NEW
+  section_id: number | null;        // NEW
+  created_at: string;
+}

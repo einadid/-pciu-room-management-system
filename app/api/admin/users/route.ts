@@ -26,7 +26,18 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('users')
-      .select('*')
+      .select(`
+        *,
+        batches (
+          id,
+          batch_name,
+          year
+        ),
+        sections (
+          id,
+          section_name
+        )
+      `)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -70,7 +81,7 @@ export async function POST(request: NextRequest) {
       }, { status: 403 });
     }
 
-    const { name, email, department, token_id, role } = await request.json();
+    const { name, email, department, token_id, role, batch_id, section_id } = await request.json();
 
     // Validation
     if (!name || !email || !department || !token_id) {
@@ -102,7 +113,9 @@ export async function POST(request: NextRequest) {
         email,
         department,
         token_id: token_id.toUpperCase(),
-        role: role || 'cr'
+        role: role || 'cr',
+        batch_id: batch_id || null,
+        section_id: section_id || null,
       }])
       .select();
 

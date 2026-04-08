@@ -84,13 +84,10 @@ export default function Footer() {
                 <span>📍</span>
                 <span>Port City International University, Chattogram</span>
               </li>
-              <li className="flex items-center gap-2">
-                <span>📧</span>
-                <span>info@pciu.ac.bd</span>
-              </li>
+              
               <li className="flex items-center gap-2">
                 <span>🌐</span>
-                <span>www.pciu.ac.bd</span>
+                <span><a href="https://www.portcity.edu.bd/" target='_blank'>www.portcity.edu.bd</a></span>
               </li>
             </ul>
           </div>
@@ -102,7 +99,7 @@ export default function Footer() {
             © {new Date().getFullYear()} Port City International University. All rights reserved.
           </p>
           <p className="text-gray-500">
-            Developed by <span className="text-cyan-400 font-medium">Emamul Islam Nadid</span>
+            Developed by <span className="text-cyan-400 font-medium"><a href="https://github.com/einadid" target='_blank'>einadid</a></span>
           </p>
         </div>
       </div>

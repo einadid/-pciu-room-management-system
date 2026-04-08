@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import Card from '@/components/ui/Card';
 
 export default function HomePage() {
   const features = [
@@ -245,6 +244,52 @@ export default function HomePage() {
               <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{building}</h3>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Quick Access Section */}
+      <section className="max-w-7xl mx-auto px-4 py-16">
+        <div className="text-center mb-10">
+          <h2 className="text-2xl sm:text-3xl font-display font-bold text-gray-900 mb-4">
+            Quick Access
+          </h2>
+          <p className="text-gray-600">
+            Jump directly to what you need
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Link href="/routine">
+            <div className="bg-white border-2 border-blue-200 rounded-xl p-6 text-center hover:border-blue-400 hover:shadow-lg transition-all">
+              <div className="text-4xl mb-3">📅</div>
+              <h3 className="font-semibold text-gray-900">View Routine</h3>
+              <p className="text-sm text-gray-500 mt-1">Check class schedules</p>
+            </div>
+          </Link>
+
+          <Link href="/check-room">
+            <div className="bg-white border-2 border-green-200 rounded-xl p-6 text-center hover:border-green-400 hover:shadow-lg transition-all">
+              <div className="text-4xl mb-3">🔍</div>
+              <h3 className="font-semibold text-gray-900">Find Rooms</h3>
+              <p className="text-sm text-gray-500 mt-1">Check availability</p>
+            </div>
+          </Link>
+
+          <Link href="/rooms">
+            <div className="bg-white border-2 border-purple-200 rounded-xl p-6 text-center hover:border-purple-400 hover:shadow-lg transition-all">
+              <div className="text-4xl mb-3">🏫</div>
+              <h3 className="font-semibold text-gray-900">All Rooms</h3>
+              <p className="text-sm text-gray-500 mt-1">Browse catalog</p>
+            </div>
+          </Link>
+
+          <Link href="/login">
+            <div className="bg-white border-2 border-orange-200 rounded-xl p-6 text-center hover:border-orange-400 hover:shadow-lg transition-all">
+              <div className="text-4xl mb-3">🔐</div>
+              <h3 className="font-semibold text-gray-900">CR Login</h3>
+              <p className="text-sm text-gray-500 mt-1">Manage schedules</p>
+            </div>
+          </Link>
         </div>
       </section>
 

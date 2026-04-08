@@ -10,6 +10,8 @@ export async function GET(request: NextRequest) {
     const day = searchParams.get('day');
     const room_id = searchParams.get('room_id');
     const department = searchParams.get('department');
+    const batch_id = searchParams.get('batch_id');
+    const section_id = searchParams.get('section_id');
 
     let query = supabase
       .from('schedules')
@@ -30,6 +32,17 @@ export async function GET(request: NextRequest) {
           id,
           name,
           role
+        ),
+        batches (
+          id,
+          batch_name,
+          department,
+          year
+        ),
+        sections (
+          id,
+          section_name,
+          total_students
         )
       `)
       .order('day_of_week', { ascending: true })
@@ -38,6 +51,8 @@ export async function GET(request: NextRequest) {
     if (day) query = query.eq('day_of_week', day);
     if (room_id) query = query.eq('room_id', parseInt(room_id));
     if (department) query = query.eq('department', department);
+    if (batch_id) query = query.eq('batch_id', parseInt(batch_id));
+    if (section_id) query = query.eq('section_id', parseInt(section_id));
 
     const { data, error } = await query;
 
@@ -93,7 +108,9 @@ export async function POST(request: NextRequest) {
       teacher_name,
       department,
       day_of_week,
-      time_slot_id
+      time_slot_id,
+      batch_id,
+      section_id,
     } = scheduleData;
 
     // Validation
@@ -131,6 +148,8 @@ export async function POST(request: NextRequest) {
         department,
         day_of_week,
         time_slot_id,
+        batch_id,
+        section_id,
         created_by: payload.userId
       }])
       .select();

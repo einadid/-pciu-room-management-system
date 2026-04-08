@@ -1,0 +1,16 @@
+{
+  "name": "PCIU Room Management System",
+  "short_name": "PCIU Rooms",
+  "description": "Smart room management for Port City International University",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e40af",
+  "icons": [
+    {
+      "src": "/pciu.png",
+      "sizes": "274x363",
+      "type": "image/png"
+    }
+  ]
+}
