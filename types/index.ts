@@ -1,0 +1,161 @@
+// ========================================
+// PORT CITY UNIVERSITY ROOM SYSTEM
+// TypeScript Type Definitions
+// ========================================
+
+// 🔹 User Types
+export type UserRole = 'admin' | 'cr';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  token_id: string | null;
+  department: string | null;
+  created_at: string;
+}
+
+// 🔹 Room Types
+export type RoomTypeName = 'Classroom' | 'Lab' | 'Special';
+
+export interface RoomType {
+  id: number;
+  type_name: RoomTypeName;
+}
+
+export interface Room {
+  id: number;
+  room_name: string;
+  building: string | null;
+  capacity: number;
+  type_id: number;
+  is_active: boolean;
+}
+
+// Room with type name (joined)
+export interface RoomWithType extends Room {
+  room_types: RoomType;
+}
+
+// 🔹 Time Slot
+export interface TimeSlot {
+  id: number;
+  start_time: string;
+  end_time: string;
+  slot_name: string;
+}
+
+// 🔹 Days
+export type DayOfWeek = 
+  | 'Sunday' 
+  | 'Monday' 
+  | 'Tuesday' 
+  | 'Wednesday' 
+  | 'Thursday';
+
+export const DAYS: DayOfWeek[] = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday'
+];
+
+// 🔹 Schedule
+export interface Schedule {
+  id: number;
+  room_id: number;
+  course_name: string;
+  course_code: string | null;
+  teacher_name: string | null;
+  department: string;
+  day_of_week: DayOfWeek;
+  time_slot_id: number;
+  created_by: string;
+  created_at: string;
+}
+
+// Schedule with relations (joined)
+export interface ScheduleWithDetails extends Schedule {
+  rooms: Room;
+  time_slots: TimeSlot;
+  users: User;
+}
+
+// 🔹 Room Ownership
+export interface RoomOwnership {
+  id: number;
+  room_id: number;
+  department: string;
+  assigned_at: string;
+}
+
+// 🔹 Room Availability Status
+export interface RoomAvailability {
+  room: Room;
+  status: 'free' | 'occupied';
+  current_class?: {
+    course_name: string;
+    teacher_name: string | null;
+    department: string;
+  };
+  owned_by?: string[];  // Departments that use this room
+  is_exclusive?: boolean;  // Only one dept uses this room
+}
+
+// 🔹 API Response Types
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+// 🔹 Auth Types
+export interface LoginRequest {
+  token_id: string;
+}
+
+export interface LoginResponse {
+  user: User;
+  access_token: string;
+}
+
+export interface JWTPayload {
+  userId: string;
+  role: UserRole;
+  department: string | null;
+}
+
+// 🔹 Form Types
+export interface CreateScheduleForm {
+  room_id: number;
+  course_name: string;
+  course_code?: string;
+  teacher_name?: string;
+  department: string;
+  day_of_week: DayOfWeek;
+  time_slot_id: number;
+}
+
+export interface CheckAvailabilityRequest {
+  day: DayOfWeek;
+  time_slot_id: number;
+  room_type?: RoomTypeName;
+  building?: string;
+}
+
+// 🔹 Department List (PCIU specific)
+export const DEPARTMENTS = [
+  'CSE',
+  'EEE', 
+  'Civil',
+  'BBA',
+  'English',
+  'Law',
+  'Pharmacy',
+  'Architecture'
+] as const;
+
+export type Department = typeof DEPARTMENTS[number];
