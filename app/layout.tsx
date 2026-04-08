@@ -7,17 +7,24 @@ import Footer from '@/components/layout/Footer';
 const inter = Inter({ 
   subsets: ['latin'],
   variable: '--font-inter',
+  display: 'swap',
 });
 
 const poppins = Poppins({ 
   weight: ['400', '500', '600', '700'],
   subsets: ['latin'],
   variable: '--font-poppins',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
   title: 'PCIU Room Management System',
   description: 'Port City International University - Smart Room Scheduling & Availability System',
+  icons: {
+    icon: '/pciu.png',
+    shortcut: '/pciu.png',
+    apple: '/pciu.png',
+  },
 };
 
 export default function RootLayout({
@@ -26,8 +33,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} ${poppins.variable} font-sans bg-light min-h-screen flex flex-col antialiased`}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.variable} ${poppins.variable} font-sans bg-light min-h-screen flex flex-col antialiased`} suppressHydrationWarning>
         <Header />
         <main className="flex-1">
           {children}

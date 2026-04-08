@@ -5,7 +5,10 @@ import { ApiResponse, LoginResponse, User } from '@/types';
 
 export async function POST(request: NextRequest) {
   try {
-    const { token_id } = await request.json();
+    const body = await request.json();
+    const { token_id } = body;
+
+    console.log('🔐 Login attempt with token:', token_id); // Debug
 
     // Validate input
     if (!token_id || token_id.trim() === '') {
@@ -15,22 +18,37 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    const cleanToken = token_id.trim().toUpperCase();
+    console.log('🔍 Searching for token:', cleanToken); // Debug
+
     // Find user by token_id
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
-      .eq('token_id', token_id.toUpperCase())
+      .eq('token_id', cleanToken)
       .single();
 
-    if (error || !user) {
+    console.log('📊 Supabase response:', { user, error }); // Debug
+
+    if (error) {
+      console.error('❌ Supabase error:', error);
       return NextResponse.json<ApiResponse>({
         success: false,
         error: 'Invalid token ID'
       }, { status: 401 });
     }
 
+    if (!user) {
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        error: 'User not found'
+      }, { status: 401 });
+    }
+
     // Generate JWT
     const access_token = generateToken(user as User);
+
+    console.log('✅ Login successful for:', user.name); // Debug
 
     return NextResponse.json<ApiResponse<LoginResponse>>({
       success: true,
@@ -41,7 +59,7 @@ export async function POST(request: NextRequest) {
     }, { status: 200 });
 
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('💥 Login error:', error);
     return NextResponse.json<ApiResponse>({
       success: false,
       error: 'Internal server error'

@@ -1,33 +1,45 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Environment variables check
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables!');
+  console.warn('⚠️ Supabase credentials missing in .env.local');
 }
 
-// Create Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-key'
+);
 
-// Test connection function
+// Test connection on import
+if (supabaseUrl && supabaseAnonKey) {
+  supabase
+    .from('users')
+    .select('count')
+    .limit(1)
+    .then(({ error }) => {
+      if (error) {
+        console.error('❌ Supabase connection failed:', error.message);
+      } else {
+        console.log('✅ Supabase connected successfully');
+      }
+    });
+}
+
 export async function testConnection(): Promise<boolean> {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return false;
+  }
+
   try {
-    const { data, error } = await supabase
-      .from('rooms')
+    const { error } = await supabase
+      .from('users')
       .select('count')
       .limit(1);
     
-    if (error) {
-      console.error('Database connection failed:', error.message);
-      return false;
-    }
-    
-    console.log('✅ Database connected successfully!');
-    return true;
-  } catch (err) {
-    console.error('Connection error:', err);
+    return !error;
+  } catch {
     return false;
   }
 }

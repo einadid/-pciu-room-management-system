@@ -103,7 +103,7 @@ export default function TestPage() {
             disabled={loading}
             className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
           >
-            Test Login (ADMIN2024)
+            Test Login
           </button>
 
           <button
