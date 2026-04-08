@@ -1,41 +1,29 @@
 # 🏫 PCIU Room Management System
 
-A smart room availability and scheduling system for Port City International University.
+Smart room availability and scheduling system for **Port City International University**.
 
 ---
 
 ## ✨ Features
 
-- 🔍 Real-time Room Availability Check
-- 👤 CR Panel for Schedule Management
-- 🔐 Token-based Authentication
-- 🏷️ Room Ownership Tracking
-- 📊 Admin Dashboard
+- 🔍 Real-time Room Availability
+- 👤 CR Dashboard
+- 🔐 Secure Authentication
+- 📊 Admin Panel
+- 📱 Responsive Design
 
 ---
 
-## 🚀 Tech Stack
+## 🚀 Technology
 
-- Next.js 14
-- TypeScript
+- Next.js 14 + TypeScript
 - Tailwind CSS
 - PostgreSQL (Supabase)
-- Vercel
-
----
-
-## 🔐 Login
-
-- **Admin Token**: `ADMIN2024`
 
 ---
 
 ## 👨‍💻 Developer
 
-**Emamul Islam Nadid**
-
----
-
-## 📝 License
-
-MIT License
+**Emamul Islam Nadid**  
+Computer Science & Engineering  
+Port City International University
