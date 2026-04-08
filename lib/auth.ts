@@ -40,12 +40,23 @@ export function extractTokenFromHeader(authHeader: string | null): string | null
   return parts[1];
 }
 
-// 🔹 Check if user is admin
+// 🔹 Check if user is admin or superadmin
 export function isAdmin(payload: JWTPayload): boolean {
-  return payload.role === 'admin';
+  return payload.role === 'admin' || payload.role === 'superadmin';
 }
 
 // 🔹 Check if user is CR
 export function isCR(payload: JWTPayload): boolean {
   return payload.role === 'cr';
 }
+
+// 🔹 Check if user is super admin
+export function isSuperAdmin(payload: JWTPayload): boolean {
+  return payload.role === 'superadmin';
+}
+
+// 🔹 Check if user can manage all schedules
+export function canManageAllSchedules(payload: JWTPayload): boolean {
+  return payload.role === 'admin' || payload.role === 'superadmin';
+}
+

@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { token_id } = body;
 
-    console.log('🔐 Login attempt with token:', token_id); // Debug
+    console.log('🔐 Login attempt with token:', token_id);
 
     // Validate input
     if (!token_id || token_id.trim() === '') {
@@ -19,36 +19,41 @@ export async function POST(request: NextRequest) {
     }
 
     const cleanToken = token_id.trim().toUpperCase();
-    console.log('🔍 Searching for token:', cleanToken); // Debug
+    console.log('🔍 Searching for token:', cleanToken);
 
     // Find user by token_id
-    const { data: user, error } = await supabase
+    const { data: users, error } = await supabase
       .from('users')
       .select('*')
-      .eq('token_id', cleanToken)
-      .single();
+      .eq('token_id', cleanToken);
 
-    console.log('📊 Supabase response:', { user, error }); // Debug
+    console.log('📊 Supabase response:', { 
+      usersFound: users?.length || 0, 
+      error: error?.message || null 
+    });
 
     if (error) {
       console.error('❌ Supabase error:', error);
       return NextResponse.json<ApiResponse>({
         success: false,
-        error: 'Invalid token ID'
+        error: 'Database error: ' + error.message
+      }, { status: 500 });
+    }
+
+    if (!users || users.length === 0) {
+      console.log('❌ No user found with token:', cleanToken);
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        error: 'Invalid token ID. Please check and try again.'
       }, { status: 401 });
     }
 
-    if (!user) {
-      return NextResponse.json<ApiResponse>({
-        success: false,
-        error: 'User not found'
-      }, { status: 401 });
-    }
+    const user = users[0];
 
     // Generate JWT
     const access_token = generateToken(user as User);
 
-    console.log('✅ Login successful for:', user.name); // Debug
+    console.log('✅ Login successful for:', user.name);
 
     return NextResponse.json<ApiResponse<LoginResponse>>({
       success: true,

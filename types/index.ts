@@ -4,7 +4,7 @@
 // ========================================
 
 // 🔹 User Types
-export type UserRole = 'admin' | 'cr';
+export type UserRole = 'admin' | 'cr' | 'superadmin';
 
 export interface User {
   id: string;
@@ -225,5 +225,28 @@ export interface User {
   department: string | null;
   batch_id: number | null;          // NEW
   section_id: number | null;        // NEW
+  created_at: string;
+}
+
+// 🔹 Notice
+export interface Notice {
+  id: number;
+  title: string;
+  content: string;
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  expires_at: string | null;
+}
+
+// 🔹 Feedback
+export interface Feedback {
+  id: number;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  status: 'pending' | 'reviewed' | 'resolved';
   created_at: string;
 }

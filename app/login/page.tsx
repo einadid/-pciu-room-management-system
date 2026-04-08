@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
@@ -12,12 +13,37 @@ export default function LoginPage() {
   const [tokenId, setTokenId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // Check if already logged in
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        if (user.role === 'admin' || user.role === 'superadmin') {
+          router.replace('/admin');
+        } else if (user.role === 'cr') {
+          router.replace('/cr');
+        }
+      } catch (err) {
+        localStorage.clear();
+      }
+    }
+    setCheckingAuth(false);
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!tokenId.trim()) {
       setError('Please enter your token ID');
+      return;
+    }
+
+    if (!acceptedTerms) {
+      setError('Please accept the terms and conditions');
       return;
     }
 
@@ -33,94 +59,73 @@ export default function LoginPage() {
 
       const data = await res.json();
 
-      console.log('Login response:', data); // Debug log
-
       if (data.success && data.data) {
-        // Save token to localStorage
+        // Save to localStorage
         localStorage.setItem('access_token', data.data.access_token);
         localStorage.setItem('user', JSON.stringify(data.data.user));
-
-        // Show success
-        alert(`Welcome, ${data.data.user.name}!`);
 
         // Redirect based on role
-        if (data.data.user.role === 'admin') {
-          router.push('/admin');
+        const role = data.data.user.role;
+        
+        if (role === 'admin' || role === 'superadmin') {
+          router.replace('/admin');
+        } else if (role === 'cr') {
+          router.replace('/cr');
         } else {
-          router.push('/cr');
+          setError('Unknown user role');
         }
       } else {
-        setError(data.error || 'Invalid token ID. Please try again.');
+        setError(data.error || 'Invalid token ID');
       }
     } catch (err) {
-      console.error('Login error:', err);
-      setError('Network error. Please check your connection and try again.');
+      setError('Network error. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Quick login for testing
-  const quickLogin = async (token: string) => {
-    setTokenId(token);
-    setLoading(true);
-    setError('');
-
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token_id: token }),
-      });
-
-      const data = await res.json();
-
-      if (data.success && data.data) {
-        localStorage.setItem('access_token', data.data.access_token);
-        localStorage.setItem('user', JSON.stringify(data.data.user));
-
-        if (data.data.user.role === 'admin') {
-          router.push('/admin');
-        } else {
-          router.push('/cr');
-        }
-      } else {
-        setError(data.error || 'Login failed');
-      }
-    } catch (err) {
-      setError('Network error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (checkingAuth) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-gray-600">Checking...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-[calc(100vh-200px)] flex items-center justify-center px-4 py-12">
+    <div className="min-h-[calc(100vh-200px)] bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
-        {/* Header */}
+        {/* Logo */}
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="relative w-16 h-20 bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="flex justify-center mb-6">
+            <div className="relative w-20 h-24 bg-white rounded-2xl shadow-xl p-2">
               <Image
                 src="/pciu.png"
                 alt="PCIU Logo"
                 fill
-                sizes="64px"
-                className="object-contain p-1"
+                sizes="80px"
+                className="object-contain"
+                priority
               />
             </div>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold font-display text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Login to System
           </h1>
           <p className="text-gray-600">
-            Enter your token ID to access the system
+            Port City International University
           </p>
         </div>
 
         {/* Login Form */}
-        <Card>
+        <Card className="shadow-xl border-t-4 border-t-blue-600">
           <form onSubmit={handleLogin} className="space-y-6">
+            {error && (
+              <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg">
+                <p className="text-red-700">{error}</p>
+              </div>
+            )}
+
             <Input
               label="Token ID"
               type="text"
@@ -130,69 +135,50 @@ export default function LoginPage() {
                 setTokenId(e.target.value.toUpperCase());
                 setError('');
               }}
-              error={error}
               autoFocus
+              className="text-center text-lg font-mono"
             />
+
+            {/* Terms */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="mt-1 w-4 h-4 text-blue-600 rounded"
+                />
+                <span className="text-sm text-gray-700">
+                  I accept the{' '}
+                  <Link href="/terms" className="text-blue-600 font-medium">Terms</Link>
+                  {' '}and{' '}
+                  <Link href="/cr-guidelines" className="text-blue-600 font-medium">Guidelines</Link>
+                </span>
+              </label>
+            </div>
 
             <Button
               type="submit"
               isLoading={loading}
+              disabled={!acceptedTerms}
               className="w-full"
               size="lg"
             >
-              {loading ? 'Logging in...' : 'Login'}
+              Login
             </Button>
           </form>
-
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
-            <h3 className="text-sm font-semibold text-blue-900 mb-3">
-              💡 Quick Login (Demo)
-            </h3>
-            <div className="space-y-2">
-              <button
-                onClick={() => quickLogin('ADMIN2024')}
-                disabled={loading}
-                className="w-full text-left px-4 py-3 bg-white rounded-lg border border-blue-200 hover:border-blue-400 hover:bg-blue-50 transition-all disabled:opacity-50"
-              >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium text-gray-900">Admin</p>
-                    <p className="text-xs text-gray-500">Full system access</p>
-                  </div>
-                  <code className="text-sm bg-blue-100 px-2 py-1 rounded text-blue-700">
-                    ADMIN2024
-                  </code>
-                </div>
-              </button>
-
-              <button
-                onClick={() => quickLogin('CRCSE001')}
-                disabled={loading}
-                className="w-full text-left px-4 py-3 bg-white rounded-lg border border-green-200 hover:border-green-400 hover:bg-green-50 transition-all disabled:opacity-50"
-              >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium text-gray-900">CR (CSE)</p>
-                    <p className="text-xs text-gray-500">Class Representative</p>
-                  </div>
-                  <code className="text-sm bg-green-100 px-2 py-1 rounded text-green-700">
-                    CRCSE001
-                  </code>
-                </div>
-              </button>
-            </div>
-          </div>
         </Card>
 
-        {/* Help */}
+        {/* WhatsApp Help */}
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-500">
-            Don't have a token?{' '}
-            <span className="text-blue-600 font-medium">
-              Contact your department admin
-            </span>
-          </p>
+          <a
+            href="https://wa.me/8801678791177"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700"
+          >
+            💬 Need Help? WhatsApp
+          </a>
         </div>
       </div>
     </div>
