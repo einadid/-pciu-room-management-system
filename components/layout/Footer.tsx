@@ -106,10 +106,14 @@ export default function Footer() {
             </h3>
             <ul className="space-y-4 text-sm">
               <li className="flex items-center gap-2">
-                <span>🌐</span>
+                <span>📧</span>
+                {/* <span>🌐</span> */}
                 <span>
-                  <a href="https://www.portcity.edu.bd/" target="_blank">
-                    www.portcity.edu.bd
+                  <a
+                    href="mailto:emamulislamnadid_cse30d@portcity.edu.bd"
+                    className="text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+                  >
+                    @portcity.edu.bd
                   </a>
                 </span>
               </li>
