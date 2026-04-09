@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import Card from '@/components/ui/Card';
-import Select from '@/components/ui/Select';
-import Badge from '@/components/ui/Badge';
-import Button from '@/components/ui/Button';
-import { DAYS } from '@/types';
+import { useState, useEffect, useRef } from "react";
+import Card from "@/components/ui/Card";
+import Select from "@/components/ui/Select";
+import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
+import { DAYS } from "@/types";
 
 interface Schedule {
   id: number;
@@ -47,9 +47,9 @@ export default function PublicRoutinePage() {
   const [batchSections, setBatchSections] = useState<BatchSection[]>([]);
   const [selectedSchedules, setSelectedSchedules] = useState<Schedule[]>([]);
 
-  const [filterDept, setFilterDept] = useState<string>('');
-  const [filterBatch, setFilterBatch] = useState<string>('');
-  const [filterSection, setFilterSection] = useState<string>('');
+  const [filterDept, setFilterDept] = useState<string>("");
+  const [filterBatch, setFilterBatch] = useState<string>("");
+  const [filterSection, setFilterSection] = useState<string>("");
 
   const [loading, setLoading] = useState(true);
   const [showRoutine, setShowRoutine] = useState(false);
@@ -66,7 +66,7 @@ export default function PublicRoutinePage() {
         (s) =>
           s.department === filterDept &&
           s.batch_name === filterBatch &&
-          s.section_name === filterSection
+          s.section_name === filterSection,
       );
       setSelectedSchedules(filtered);
       setShowRoutine(true);
@@ -78,7 +78,7 @@ export default function PublicRoutinePage() {
 
   const fetchAllSchedules = async () => {
     try {
-      const res = await fetch('/api/schedules');
+      const res = await fetch("/api/schedules");
       const data = await res.json();
 
       if (data.success) {
@@ -106,7 +106,7 @@ export default function PublicRoutinePage() {
         setBatchSections(Object.values(uniqueBatchSections));
       }
     } catch (err) {
-      console.error('Failed to fetch schedules:', err);
+      console.error("Failed to fetch schedules:", err);
     } finally {
       setLoading(false);
     }
@@ -118,7 +118,7 @@ export default function PublicRoutinePage() {
     ...new Set(
       batchSections
         .filter((bs) => !filterDept || bs.department === filterDept)
-        .map((bs) => bs.batch_name)
+        .map((bs) => bs.batch_name),
     ),
   ];
 
@@ -128,9 +128,9 @@ export default function PublicRoutinePage() {
         .filter(
           (bs) =>
             (!filterDept || bs.department === filterDept) &&
-            (!filterBatch || bs.batch_name === filterBatch)
+            (!filterBatch || bs.batch_name === filterBatch),
         )
-        .map((bs) => bs.section_name)
+        .map((bs) => bs.section_name),
     ),
   ];
 
@@ -144,20 +144,20 @@ export default function PublicRoutinePage() {
     if (!routineRef.current) return;
 
     try {
-      const html2canvas = (await import('html2canvas')).default;
+      const html2canvas = (await import("html2canvas")).default;
 
       const canvas = await html2canvas(routineRef.current, {
-        backgroundColor: '#ffffff',
+        background: "#ffffff", 
         scale: 2,
       });
 
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.download = `Routine-${filterDept}-${filterBatch}-Section${filterSection}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.href = canvas.toDataURL("image/png");
       link.click();
     } catch (error) {
-      console.error('Download error:', error);
-      alert('Failed to download. Please try again.');
+      console.error("Download error:", error);
+      alert("Failed to download. Please try again.");
     }
   };
 
@@ -175,12 +175,12 @@ export default function PublicRoutinePage() {
   });
 
   const timeSlots = [
-    { id: 1, name: 'Slot 1', time: '08:30 - 09:55' },
-    { id: 2, name: 'Slot 2', time: '10:00 - 11:25' },
-    { id: 3, name: 'Slot 3', time: '11:30 - 12:55' },
-    { id: 4, name: 'Slot 4', time: '13:30 - 14:55' },
-    { id: 5, name: 'Slot 5', time: '15:00 - 16:25' },
-    { id: 6, name: 'Slot 6', time: '16:30 - 17:55' },
+    { id: 1, name: "Slot 1", time: "08:30 - 09:55" },
+    { id: 2, name: "Slot 2", time: "10:00 - 11:25" },
+    { id: 3, name: "Slot 3", time: "11:30 - 12:55" },
+    { id: 4, name: "Slot 4", time: "13:30 - 14:55" },
+    { id: 5, name: "Slot 5", time: "15:00 - 16:25" },
+    { id: 6, name: "Slot 6", time: "16:30 - 17:55" },
   ];
 
   if (loading) {
@@ -201,12 +201,18 @@ export default function PublicRoutinePage() {
         <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
           📅 Class Routine
         </h1>
-        <p className="text-gray-600 text-lg">View class schedules for all departments</p>
+        <p className="text-gray-600 text-lg">
+          View class schedules for all departments
+        </p>
       </div>
 
       {/* Quick Select */}
       {batchSections.length > 0 && !showRoutine && (
-        <Card title="📚 Available Routines" subtitle="Click to view routine" className="mb-8">
+        <Card
+          title="📚 Available Routines"
+          subtitle="Click to view routine"
+          className="mb-8"
+        >
           <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {batchSections.map((bs, index) => (
               <div
@@ -216,10 +222,14 @@ export default function PublicRoutinePage() {
               >
                 <div className="flex items-center justify-between mb-2">
                   <Badge variant="default">{bs.department}</Badge>
-                  <span className="text-xs text-gray-500">{bs.count} classes</span>
+                  <span className="text-xs text-gray-500">
+                    {bs.count} classes
+                  </span>
                 </div>
                 <h3 className="font-bold text-gray-900">{bs.batch_name}</h3>
-                <p className="text-sm text-gray-600">Section {bs.section_name}</p>
+                <p className="text-sm text-gray-600">
+                  Section {bs.section_name}
+                </p>
               </div>
             ))}
           </div>
@@ -234,8 +244,8 @@ export default function PublicRoutinePage() {
             value={filterDept}
             onChange={(e) => {
               setFilterDept(e.target.value);
-              setFilterBatch('');
-              setFilterSection('');
+              setFilterBatch("");
+              setFilterSection("");
             }}
             options={departments.map((dept) => ({ value: dept, label: dept }))}
             placeholder="Select department"
@@ -247,7 +257,7 @@ export default function PublicRoutinePage() {
               value={filterBatch}
               onChange={(e) => {
                 setFilterBatch(e.target.value);
-                setFilterSection('');
+                setFilterSection("");
               }}
               options={batches.map((batch) => ({ value: batch, label: batch }))}
               placeholder="Select batch"
@@ -274,9 +284,9 @@ export default function PublicRoutinePage() {
             <Button
               variant="secondary"
               onClick={() => {
-                setFilterDept('');
-                setFilterBatch('');
-                setFilterSection('');
+                setFilterDept("");
+                setFilterBatch("");
+                setFilterSection("");
                 setShowRoutine(false);
               }}
             >
@@ -291,12 +301,18 @@ export default function PublicRoutinePage() {
         <div ref={routineRef}>
           {/* Info Header */}
           <div className="bg-blue-600 text-white rounded-t-xl p-6 text-center">
-            <h2 className="text-2xl font-bold mb-2">Port City International University</h2>
+            <h2 className="text-2xl font-bold mb-2">
+              Port City International University
+            </h2>
             <p className="text-blue-100">Class Routine</p>
 
             <div className="flex justify-center gap-4 mt-4 flex-wrap">
-              <span className="bg-white/20 px-4 py-2 rounded-lg">📚 {filterDept}</span>
-              <span className="bg-white/20 px-4 py-2 rounded-lg">🎓 {filterBatch}</span>
+              <span className="bg-white/20 px-4 py-2 rounded-lg">
+                📚 {filterDept}
+              </span>
+              <span className="bg-white/20 px-4 py-2 rounded-lg">
+                🎓 {filterBatch}
+              </span>
               <span className="bg-white/20 px-4 py-2 rounded-lg">
                 👥 Section {filterSection}
               </span>
@@ -308,7 +324,9 @@ export default function PublicRoutinePage() {
             {selectedSchedules.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">📭</div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Classes Found</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  No Classes Found
+                </h3>
                 <p className="text-gray-500">
                   No schedules have been added for this section yet.
                 </p>
@@ -336,8 +354,12 @@ export default function PublicRoutinePage() {
                     {timeSlots.map((slot) => (
                       <tr key={slot.id}>
                         <td className="border border-gray-300 px-3 py-3 bg-gray-50">
-                          <div className="font-medium text-gray-900 text-sm">{slot.name}</div>
-                          <div className="text-xs text-gray-500">{slot.time}</div>
+                          <div className="font-medium text-gray-900 text-sm">
+                            {slot.name}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {slot.time}
+                          </div>
                         </td>
 
                         {DAYS.map((day) => {
@@ -348,7 +370,7 @@ export default function PublicRoutinePage() {
                             <td
                               key={day}
                               className={`border border-gray-300 px-2 py-2 text-xs align-top ${
-                                hasAny ? 'bg-blue-50' : ''
+                                hasAny ? "bg-blue-50" : ""
                               }`}
                             >
                               {hasAny ? (
@@ -363,7 +385,9 @@ export default function PublicRoutinePage() {
                                       </div>
 
                                       {schedule.course_code && (
-                                        <div className="text-gray-600">{schedule.course_code}</div>
+                                        <div className="text-gray-600">
+                                          {schedule.course_code}
+                                        </div>
                                       )}
 
                                       {schedule.teacher_name && (
@@ -375,7 +399,7 @@ export default function PublicRoutinePage() {
                                       {/* ✅ UPDATED: show room + sub-section + lab tag */}
                                       <div className="pt-1 flex flex-wrap gap-1">
                                         <span className="inline-block bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-[10px] font-medium">
-                                          📍 {schedule.rooms?.room_name ?? '—'}
+                                          📍 {schedule.rooms?.room_name ?? "—"}
                                         </span>
 
                                         {schedule.sub_section && (
@@ -384,7 +408,7 @@ export default function PublicRoutinePage() {
                                           </span>
                                         )}
 
-                                        {schedule.class_type === 'Lab' && (
+                                        {schedule.class_type === "Lab" && (
                                           <span className="inline-block bg-green-100 text-green-800 px-2 py-0.5 rounded text-[10px] font-medium">
                                             🔬 Lab
                                           </span>
@@ -394,7 +418,9 @@ export default function PublicRoutinePage() {
                                   ))}
                                 </div>
                               ) : (
-                                <div className="text-gray-400 text-center">-</div>
+                                <div className="text-gray-400 text-center">
+                                  -
+                                </div>
                               )}
                             </td>
                           );
@@ -410,14 +436,15 @@ export default function PublicRoutinePage() {
             <div className="mt-6 pt-4 border-t border-gray-200">
               <div className="flex flex-wrap justify-between items-center gap-4 text-sm text-gray-600">
                 <div>
-                  <span className="font-medium">Total Classes:</span> {selectedSchedules.length}
+                  <span className="font-medium">Total Classes:</span>{" "}
+                  {selectedSchedules.length}
                 </div>
                 <div>
-                  <span className="font-medium">Generated:</span>{' '}
-                  {new Date().toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
+                  <span className="font-medium">Generated:</span>{" "}
+                  {new Date().toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
                   })}
                 </div>
               </div>
@@ -431,7 +458,9 @@ export default function PublicRoutinePage() {
         <Card>
           <div className="text-center py-16">
             <div className="text-8xl mb-6">📅</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">No Routines Available</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">
+              No Routines Available
+            </h3>
             <p className="text-gray-500 text-lg">
               No class schedules have been added yet.
               <br />
