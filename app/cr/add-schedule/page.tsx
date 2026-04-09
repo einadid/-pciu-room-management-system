@@ -22,6 +22,8 @@ export default function AddSchedulePage() {
     teacher_name: '',
     day_of_week: '' as DayOfWeek | '',
     time_slot_id: '',
+    class_type: 'Theory',
+    sub_section: '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -78,6 +80,13 @@ export default function AddSchedulePage() {
     setError('');
     setSuccess(false);
 
+    // Validation for Lab classes
+    if (formData.class_type === 'Lab' && !formData.sub_section) {
+      setError('Please select a lab group for Lab classes');
+      setLoading(false);
+      return;
+    }
+
     try {
       const token = localStorage.getItem('access_token');
 
@@ -94,6 +103,7 @@ export default function AddSchedulePage() {
           department: user?.department,
           batch_name: user?.batch_name,
           section_name: user?.section_name,
+          sub_section: formData.class_type === 'Theory' ? null : formData.sub_section,
         }),
       });
 
@@ -108,6 +118,8 @@ export default function AddSchedulePage() {
           teacher_name: '',
           day_of_week: '',
           time_slot_id: '',
+          class_type: 'Theory',
+          sub_section: '',
         });
 
         setTimeout(() => {
@@ -122,6 +134,14 @@ export default function AddSchedulePage() {
       setLoading(false);
     }
   };
+
+  // Filter rooms based on class type
+  const filteredRooms = rooms.filter(room => {
+    if (formData.class_type === 'Lab') {
+      return room.room_types?.type_name === 'Lab';
+    }
+    return true;
+  });
 
   if (checkingAuth) {
     return (
@@ -163,6 +183,95 @@ export default function AddSchedulePage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Class Type Selection */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <h4 className="font-medium text-gray-900 mb-3">📚 Class Type</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <label 
+                className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  formData.class_type === 'Theory' 
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="class_type"
+                  value="Theory"
+                  checked={formData.class_type === 'Theory'}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    class_type: e.target.value,
+                    sub_section: '' 
+                  })}
+                  className="sr-only"
+                />
+                <span className="text-2xl">📖</span>
+                <span className="font-medium">Theory</span>
+              </label>
+
+              <label 
+                className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  formData.class_type === 'Lab' 
+                    ? 'border-purple-500 bg-purple-50' 
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="class_type"
+                  value="Lab"
+                  checked={formData.class_type === 'Lab'}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    class_type: e.target.value 
+                  })}
+                  className="sr-only"
+                />
+                <span className="text-2xl">🔬</span>
+                <span className="font-medium">Lab</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Lab Group Selection */}
+          {formData.class_type === 'Lab' && (
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+              <h4 className="font-medium text-purple-900 mb-3">👥 Lab Group</h4>
+              <p className="text-sm text-purple-700 mb-3">
+                Select which group this lab is for (e.g., A1, A2 for Section A)
+              </p>
+              <div className="grid grid-cols-4 gap-2">
+                {['1', '2', '3', '4'].map((num) => (
+                  <label 
+                    key={num}
+                    className={`flex items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                      formData.sub_section === `${user?.section_name}${num}`
+                        ? 'border-purple-500 bg-purple-100' 
+                        : 'border-gray-200 bg-white hover:border-purple-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="sub_section"
+                      value={`${user?.section_name}${num}`}
+                      checked={formData.sub_section === `${user?.section_name}${num}`}
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        sub_section: e.target.value 
+                      })}
+                      className="sr-only"
+                    />
+                    <span className="font-bold text-lg">
+                      {user?.section_name}{num}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Course Details */}
           <div className="grid md:grid-cols-2 gap-4">
             <Input
               label="Course Name *"
@@ -187,6 +296,7 @@ export default function AddSchedulePage() {
             onChange={(e) => setFormData({ ...formData, teacher_name: e.target.value })}
           />
 
+          {/* Day & Time */}
           <div className="grid md:grid-cols-2 gap-4">
             <Select
               label="Day *"
@@ -209,10 +319,10 @@ export default function AddSchedulePage() {
           </div>
 
           <Select
-            label="Room *"
+            label={`Room * ${formData.class_type === 'Lab' ? '(Showing Labs only)' : ''}`}
             value={formData.room_id}
             onChange={(e) => setFormData({ ...formData, room_id: e.target.value })}
-            options={rooms.map((room) => ({
+            options={filteredRooms.map((room) => ({
               value: room.id,
               label: `${room.room_name} - ${room.building} (${room.room_types?.type_name || 'Room'})`,
             }))}

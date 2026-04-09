@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
     const department = searchParams.get('department');
     const batch_name = searchParams.get('batch_name');
     const section_name = searchParams.get('section_name');
+    const sub_section = searchParams.get('sub_section');
 
     let query = supabase
       .from('schedules')
@@ -29,6 +30,7 @@ export async function GET(request: NextRequest) {
     if (department) query = query.eq('department', department);
     if (batch_name) query = query.eq('batch_name', batch_name);
     if (section_name) query = query.eq('section_name', section_name);
+    if (sub_section) query = query.eq('sub_section', sub_section);
 
     const { data, error } = await query;
 
@@ -84,6 +86,8 @@ export async function POST(request: NextRequest) {
       time_slot_id,
       batch_name,
       section_name,
+      sub_section,
+      class_type,
     } = body;
 
     // Validation
@@ -95,19 +99,38 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for conflicts
-    const { data: existing } = await supabase
+    // For Theory: Check if same room, day, time
+    // For Lab: Check if same room, day, time (different sub_section is OK)
+    let conflictQuery = supabase
       .from('schedules')
-      .select('id')
+      .select('id, course_name, sub_section, class_type')
       .eq('room_id', room_id)
       .eq('day_of_week', day_of_week)
-      .eq('time_slot_id', time_slot_id)
-      .single();
+      .eq('time_slot_id', time_slot_id);
 
-    if (existing) {
-      return NextResponse.json<ApiResponse>({
-        success: false,
-        error: 'Room is already booked for this time slot'
-      }, { status: 409 });
+    const { data: existing } = await conflictQuery;
+
+    if (existing && existing.length > 0) {
+      // If Lab class and sub_section is different, allow it
+      if (class_type === 'Lab' && sub_section) {
+        const sameSubSection = existing.find(e => e.sub_section === sub_section);
+        if (sameSubSection) {
+          return NextResponse.json<ApiResponse>({
+            success: false,
+            error: `Room is already booked for ${sub_section} at this time`
+          }, { status: 409 });
+        }
+        // Different sub_section - this is a conflict! Same room can't have 2 labs
+        return NextResponse.json<ApiResponse>({
+          success: false,
+          error: `Room is already booked by another group at this time`
+        }, { status: 409 });
+      } else {
+        return NextResponse.json<ApiResponse>({
+          success: false,
+          error: 'Room is already booked for this time slot'
+        }, { status: 409 });
+      }
     }
 
     // Insert
@@ -123,6 +146,8 @@ export async function POST(request: NextRequest) {
         time_slot_id,
         batch_name,
         section_name,
+        sub_section: sub_section || null,
+        class_type: class_type || 'Theory',
         created_by: payload.userId
       }])
       .select();
