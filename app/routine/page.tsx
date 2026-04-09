@@ -147,7 +147,6 @@ export default function PublicRoutinePage() {
       const html2canvas = (await import("html2canvas")).default;
 
       const canvas = await html2canvas(routineRef.current, {
-        background: "#ffffff", 
         scale: 2,
       });
 
