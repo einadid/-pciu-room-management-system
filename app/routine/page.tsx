@@ -146,9 +146,13 @@ export default function PublicRoutinePage() {
     try {
       const html2canvas = (await import("html2canvas")).default;
 
-      const canvas = await html2canvas(routineRef.current, {
-        scale: 2,
-      });
+      const canvas = await html2canvas(
+        routineRef.current,
+        {
+          scale: 2,
+          backgroundColor: "#ffffff",
+        } as any, 
+      );
 
       const link = document.createElement("a");
       link.download = `Routine-${filterDept}-${filterBatch}-Section${filterSection}.png`;
