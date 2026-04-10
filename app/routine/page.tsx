@@ -182,103 +182,82 @@ export default function PublicRoutinePage() {
     setShowRoutine(false);
   };
 
-  // Download PNG function
-  const handleDownload = async () => {
-    if (!routineRef.current) return;
+ // Download PNG function
+const handleDownload = async () => {
+  if (!routineRef.current) return;
 
-    setDownloading(true);
+  setDownloading(true);
 
-    try {
-      const html2canvas = (await import('html2canvas')).default;
-      const element = routineRef.current;
+  try {
+    const html2canvas = (await import('html2canvas')).default;
+    const element = routineRef.current;
 
-      // Store original styles
-      const originalStyle = {
-        width: element.style.width,
-        maxWidth: element.style.maxWidth,
-        overflow: element.style.overflow,
-        position: element.style.position,
-      };
+    // Store original styles
+    const originalStyle = {
+      width: element.style.width,
+      maxWidth: element.style.maxWidth,
+      overflow: element.style.overflow,
+      position: element.style.position,
+    };
 
-      // Find the table container and store its original overflow
-      const tableContainer = element.querySelector('.overflow-x-auto') as HTMLElement;
-      const originalTableOverflow = tableContainer?.style.overflow;
+    // Find the table container and store its original overflow
+    const tableContainer = element.querySelector('.overflow-x-auto') as HTMLElement;
+    const originalTableOverflow = tableContainer?.style.overflow;
 
-      // Temporarily modify styles for full capture
-      element.style.width = 'fit-content';
-      element.style.maxWidth = 'none';
-      element.style.overflow = 'visible';
-      
-      if (tableContainer) {
-        tableContainer.style.overflow = 'visible';
-      }
-
-      // Wait for styles to apply
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Calculate the actual full width needed
-      const table = element.querySelector('table');
-      const fullWidth = Math.max(
-        element.scrollWidth,
-        element.offsetWidth,
-        table?.scrollWidth || 0,
-        1200 // Minimum width for readability
-      );
-
-      const canvas = await html2canvas(element, {
-        backgroundColor: '#ffffff',
-        scale: 2, // Higher quality
-        useCORS: true,
-        logging: false,
-        width: fullWidth,
-        windowWidth: fullWidth,
-        scrollX: 0,
-        scrollY: 0,
-        // Capture full element
-        onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.querySelector('[data-routine-container]') as HTMLElement;
-          if (clonedElement) {
-            clonedElement.style.width = `${fullWidth}px`;
-            clonedElement.style.maxWidth = 'none';
-            clonedElement.style.overflow = 'visible';
-          }
-          
-          const clonedTableContainer = clonedDoc.querySelector('.overflow-x-auto') as HTMLElement;
-          if (clonedTableContainer) {
-            clonedTableContainer.style.overflow = 'visible';
-            clonedTableContainer.style.width = '100%';
-          }
-
-          const clonedTable = clonedDoc.querySelector('table') as HTMLElement;
-          if (clonedTable) {
-            clonedTable.style.width = '100%';
-            clonedTable.style.minWidth = `${fullWidth - 48}px`; // Account for padding
-          }
-        },
-      });
-
-      // Restore original styles
-      element.style.width = originalStyle.width;
-      element.style.maxWidth = originalStyle.maxWidth;
-      element.style.overflow = originalStyle.overflow;
-      
-      if (tableContainer) {
-        tableContainer.style.overflow = originalTableOverflow || '';
-      }
-
-      // Download the image
-      const link = document.createElement('a');
-      link.download = `Routine-${filters.dept}-${filters.batch}-Section${filters.section}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-
-    } catch (error) {
-      console.error('Download error:', error);
-      alert('Failed to download. Please try again or use desktop for better results.');
-    } finally {
-      setDownloading(false);
+    // Temporarily modify styles for full capture
+    element.style.width = 'fit-content';
+    element.style.maxWidth = 'none';
+    element.style.overflow = 'visible';
+    
+    if (tableContainer) {
+      tableContainer.style.overflow = 'visible';
     }
-  };
+
+    // Wait for styles to apply
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Calculate the actual full width needed
+    const table = element.querySelector('table');
+    const fullWidth = Math.max(
+      element.scrollWidth,
+      element.offsetWidth,
+      table?.scrollWidth || 0,
+      1200
+    );
+
+    // Use type assertion to bypass TypeScript strict checking
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      width: fullWidth,
+      windowWidth: fullWidth,
+      scrollX: 0,
+      scrollY: 0,
+    } as Parameters<typeof html2canvas>[1]);
+
+    // Restore original styles
+    element.style.width = originalStyle.width;
+    element.style.maxWidth = originalStyle.maxWidth;
+    element.style.overflow = originalStyle.overflow;
+    
+    if (tableContainer) {
+      tableContainer.style.overflow = originalTableOverflow || '';
+    }
+
+    // Download the image
+    const link = document.createElement('a');
+    link.download = `Routine-${filters.dept}-${filters.batch}-Section${filters.section}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+
+  } catch (error) {
+    console.error('Download error:', error);
+    alert('Failed to download. Please try again.');
+  } finally {
+    setDownloading(false);
+  }
+};
 
   // Process schedules to identify multi-slot classes
   const processSchedules = (): Map<string, ProcessedSchedule[]> => {
