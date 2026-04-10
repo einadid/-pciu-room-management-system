@@ -12,7 +12,6 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check authentication
     const userData = localStorage.getItem('user');
     const token = localStorage.getItem('access_token');
 
@@ -24,7 +23,6 @@ export default function AdminDashboard() {
     try {
       const parsedUser = JSON.parse(userData);
       
-      // Only allow admin or superadmin
       if (parsedUser.role !== 'admin' && parsedUser.role !== 'superadmin') {
         router.replace('/login');
         return;
@@ -54,9 +52,7 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -64,14 +60,10 @@ export default function AdminDashboard() {
       <div className="flex justify-between items-start mb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-3xl font-bold text-gray-900">
-              Admin Dashboard
-            </h1>
+            <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
             <Badge variant="special">{user.role}</Badge>
           </div>
-          <p className="text-gray-600">
-            Welcome back, {user.name}
-          </p>
+          <p className="text-gray-600">Welcome back, {user.name}</p>
         </div>
         <Button variant="danger" onClick={handleLogout}>
           Logout
@@ -79,19 +71,15 @@ export default function AdminDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid md:grid-cols-3 gap-4 mb-8">
+      <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
         <Card 
           className="hover:border-blue-300 cursor-pointer transition-colors"
           onClick={() => router.push('/admin/generate-token')}
         >
           <div className="text-center py-4">
             <div className="text-5xl mb-4">🔑</div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Generate Token
-            </h3>
-            <p className="text-sm text-gray-500">
-              Create CR accounts
-            </p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Generate Token</h3>
+            <p className="text-sm text-gray-500">Create CR accounts</p>
           </div>
         </Card>
 
@@ -101,12 +89,20 @@ export default function AdminDashboard() {
         >
           <div className="text-center py-4">
             <div className="text-5xl mb-4">👥</div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Manage Users
-            </h3>
-            <p className="text-sm text-gray-500">
-              View all users
-            </p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Manage Users</h3>
+            <p className="text-sm text-gray-500">View all users</p>
+          </div>
+        </Card>
+
+        {/* NEW: Room Management */}
+        <Card 
+          className="hover:border-yellow-300 cursor-pointer transition-colors"
+          onClick={() => router.push('/admin/rooms')}
+        >
+          <div className="text-center py-4">
+            <div className="text-5xl mb-4">🏢</div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Manage Rooms</h3>
+            <p className="text-sm text-gray-500">Add & delete rooms</p>
           </div>
         </Card>
 
@@ -116,12 +112,8 @@ export default function AdminDashboard() {
         >
           <div className="text-center py-4">
             <div className="text-5xl mb-4">📋</div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              All Schedules
-            </h3>
-            <p className="text-sm text-gray-500">
-              View all classes
-            </p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">All Schedules</h3>
+            <p className="text-sm text-gray-500">View all classes</p>
           </div>
         </Card>
 
@@ -131,12 +123,8 @@ export default function AdminDashboard() {
         >
           <div className="text-center py-4">
             <div className="text-5xl mb-4">📬</div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Messages
-            </h3>
-            <p className="text-sm text-gray-500">
-              Contact submissions
-            </p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Messages</h3>
+            <p className="text-sm text-gray-500">Contact submissions</p>
           </div>
         </Card>
 
@@ -146,12 +134,8 @@ export default function AdminDashboard() {
         >
           <div className="text-center py-4">
             <div className="text-5xl mb-4">🔍</div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Check Room
-            </h3>
-            <p className="text-sm text-gray-500">
-              Room availability
-            </p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Check Room</h3>
+            <p className="text-sm text-gray-500">Room availability</p>
           </div>
         </Card>
 
@@ -161,12 +145,8 @@ export default function AdminDashboard() {
         >
           <div className="text-center py-4">
             <div className="text-5xl mb-4">📅</div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              View Routine
-            </h3>
-            <p className="text-sm text-gray-500">
-              Class schedules
-            </p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">View Routine</h3>
+            <p className="text-sm text-gray-500">Class schedules</p>
           </div>
         </Card>
       </div>

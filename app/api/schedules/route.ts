@@ -8,6 +8,34 @@ import { randomUUID } from 'crypto';
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
+    
+    // Check for single schedule by ID first
+    const id = searchParams.get('id');
+    if (id) {
+      const { data, error } = await supabase
+        .from('schedules')
+        .select(`
+          *,
+          rooms (id, room_name, building),
+          time_slots (id, start_time, end_time, slot_name),
+          users (id, name)
+        `)
+        .eq('id', parseInt(id));
+
+      if (error) {
+        return NextResponse.json<ApiResponse>({
+          success: false,
+          error: error.message
+        }, { status: 500 });
+      }
+
+      return NextResponse.json<ApiResponse>({
+        success: true,
+        data: data || []
+      }, { status: 200 });
+    }
+
+    // Continue with existing filters
     const day = searchParams.get('day');
     const room_id = searchParams.get('room_id');
     const department = searchParams.get('department');
@@ -93,7 +121,7 @@ export async function POST(request: NextRequest) {
       section_name,
       sub_section,
       class_type,
-      duration_slots, // NEW: for multi-slot classes (e.g., 3 for 3-hour lab)
+      duration_slots,
     } = body;
 
     // Basic validation
@@ -104,14 +132,14 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Calculate slots to book (default 1 for theory, or use duration_slots for labs)
+    // Calculate slots to book
     const slotsToBook = Math.max(1, Number(duration_slots || 1));
     const startSlot = Number(time_slot_id);
     
     // Generate array of slot IDs to book
     const slotIds = Array.from({ length: slotsToBook }, (_, i) => startSlot + i);
 
-    // Validate that slots don't exceed max slot number (assuming 6 slots per day)
+    // Validate that slots don't exceed max slot number
     const MAX_SLOTS_PER_DAY = 6;
     if (slotIds.some(s => s < 1 || s > MAX_SLOTS_PER_DAY)) {
       return NextResponse.json<ApiResponse>({
@@ -137,8 +165,6 @@ export async function POST(request: NextRequest) {
 
     // Handle conflicts
     if (conflicts && conflicts.length > 0) {
-      // For Lab classes with different sub_sections in same room - still a conflict!
-      // (One room can't have two different lab groups at the same time)
       const conflictSlot = conflicts[0];
       
       return NextResponse.json<ApiResponse>({
@@ -147,7 +173,7 @@ export async function POST(request: NextRequest) {
       }, { status: 409 });
     }
 
-    // Generate a unique session_id for this booking (all slots will share this)
+    // Generate a unique session_id for this booking
     const session_id = randomUUID();
 
     // Create schedule entries for all required slots
@@ -164,9 +190,7 @@ export async function POST(request: NextRequest) {
       sub_section: sub_section || null,
       class_type: class_type || 'Theory',
       created_by: payload.userId,
-      session_id: session_id, // All slots get same session_id
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      session_id: session_id,
     }));
 
     // Insert all schedule entries

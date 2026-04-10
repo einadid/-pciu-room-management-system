@@ -60,6 +60,11 @@ export default function CRDashboard() {
     }
   };
 
+  // Edit schedule - navigate to edit page
+  const handleEditSchedule = (scheduleId: number) => {
+    router.push(`/cr/edit-schedule/${scheduleId}`);
+  };
+
   // Delete single schedule
   const handleDeleteSchedule = async (scheduleId: number, courseName: string) => {
     if (!confirm(`Are you sure you want to delete "${courseName}"?`)) {
@@ -81,6 +86,7 @@ export default function CRDashboard() {
 
       if (data.success) {
         setSchedules(schedules.filter(s => s.id !== scheduleId));
+        alert('✅ Schedule deleted successfully!');
       } else {
         alert('❌ Failed: ' + data.error);
       }
@@ -199,7 +205,7 @@ export default function CRDashboard() {
       <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
       <div className="grid md:grid-cols-4 gap-4 mb-8">
         <Card 
-          className="hover:border-blue-400 hover:shadow-md transition-all"
+          className="hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
           onClick={() => router.push('/cr/add-schedule')}
         >
           <div className="text-center py-2">
@@ -210,7 +216,7 @@ export default function CRDashboard() {
         </Card>
 
         <Card 
-          className="hover:border-green-400 hover:shadow-md transition-all"
+          className="hover:border-green-400 hover:shadow-md transition-all cursor-pointer"
           onClick={() => router.push('/cr/schedules')}
         >
           <div className="text-center py-2">
@@ -221,7 +227,7 @@ export default function CRDashboard() {
         </Card>
 
         <Card 
-          className="hover:border-purple-400 hover:shadow-md transition-all"
+          className="hover:border-purple-400 hover:shadow-md transition-all cursor-pointer"
           onClick={() => router.push('/check-room')}
         >
           <div className="text-center py-2">
@@ -232,7 +238,7 @@ export default function CRDashboard() {
         </Card>
 
         <Card 
-          className="hover:border-cyan-400 hover:shadow-md transition-all"
+          className="hover:border-cyan-400 hover:shadow-md transition-all cursor-pointer"
           onClick={() => router.push('/routine')}
         >
           <div className="text-center py-2">
@@ -243,7 +249,7 @@ export default function CRDashboard() {
         </Card>
       </div>
 
-      {/* Recent Classes with Delete */}
+      {/* Recent Classes with Edit & Delete */}
       <Card title="📚 Your Classes" className="mb-8">
         {schedules.length === 0 ? (
           <div className="text-center py-8">
@@ -264,7 +270,7 @@ export default function CRDashboard() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Room</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Action</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -302,27 +308,38 @@ export default function CRDashboard() {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-center">
-                      <button
-                        onClick={() => handleDeleteSchedule(schedule.id, schedule.course_name)}
-                        disabled={deletingId === schedule.id}
-                        className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-                          deletingId === schedule.id
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-red-50 text-red-600 hover:bg-red-100'
-                        }`}
-                      >
-                        {deletingId === schedule.id ? (
-                          <>
-                            <span className="animate-spin">⏳</span>
-                            Deleting...
-                          </>
-                        ) : (
-                          <>
-                            🗑️ Delete
-                          </>
-                        )}
-                      </button>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-2">
+                        {/* Edit Button */}
+                        <button
+                          onClick={() => handleEditSchedule(schedule.id)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors bg-blue-50 text-blue-600 hover:bg-blue-100"
+                        >
+                          ✏️ Edit
+                        </button>
+                        
+                        {/* Delete Button */}
+                        <button
+                          onClick={() => handleDeleteSchedule(schedule.id, schedule.course_name)}
+                          disabled={deletingId === schedule.id}
+                          className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                            deletingId === schedule.id
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'bg-red-50 text-red-600 hover:bg-red-100'
+                          }`}
+                        >
+                          {deletingId === schedule.id ? (
+                            <>
+                              <span className="animate-spin">⏳</span>
+                              Deleting...
+                            </>
+                          ) : (
+                            <>
+                              🗑️ Delete
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -341,7 +358,7 @@ export default function CRDashboard() {
                 Archive and delete all <strong>{schedules.length}</strong> schedules for new semester.
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                Archived routines can be viewed in "Previous Routines"
+                Archived routines can be viewed in &quot;Previous Routines&quot;
               </p>
             </div>
             <Button
