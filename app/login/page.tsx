@@ -177,7 +177,7 @@ export default function LoginPage() {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700"
           >
-            💬 Need Help? WhatsApp
+            💬 Need Token ID? WhatsApp
           </a>
         </div>
       </div>
