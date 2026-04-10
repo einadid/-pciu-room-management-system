@@ -250,3 +250,23 @@ export interface Feedback {
   status: 'pending' | 'reviewed' | 'resolved';
   created_at: string;
 }
+
+// Add at the end of types/index.ts
+export function getSubSectionColor(subSection?: string | null): string {
+  if (!subSection) {
+    return 'bg-gray-100 text-gray-800';
+  }
+  const lastChar = subSection.slice(-1);
+  switch (lastChar) {
+    case '1':
+      return 'bg-purple-100 text-purple-800';
+    case '2':
+      return 'bg-emerald-100 text-emerald-800';
+    case '3':
+      return 'bg-orange-100 text-orange-800';
+    case '4':
+      return 'bg-pink-100 text-pink-800';
+    default:
+      return 'bg-blue-100 text-blue-800';
+  }
+}
