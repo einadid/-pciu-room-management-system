@@ -1,13 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import Card from '@/components/ui/Card';
 import Select from '@/components/ui/Select';
-import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { DAYS } from '@/types';
 
-// Schedule interface with all fields
 interface Schedule {
   id: number;
   course_name: string;
@@ -21,16 +18,10 @@ interface Schedule {
   time_slot_id: number;
   class_type: string | null;
   session_id: string | null;
-  rooms?: {
-    id: number;
-    room_name: string;
-    building: string;
-  } | null;
+  rooms?: { id: number; room_name: string; building: string } | null;
   time_slots?: {
-    id: number;
-    slot_name: string;
-    start_time: string;
-    end_time: string;
+    id: number; slot_name: string;
+    start_time: string; end_time: string;
   } | null;
 }
 
@@ -48,656 +39,991 @@ interface ProcessedSchedule extends Schedule {
   sessionSlots: number[];
 }
 
-// Helper function for sub-section colors
-const getSubSectionColor = (subSection: string | null): string => {
-  if (!subSection) return 'bg-gray-100 text-gray-800';
-  
-  const lastChar = subSection.slice(-1);
-  const colors: { [key: string]: string } = {
-    '1': 'bg-blue-100 text-blue-800',
-    '2': 'bg-green-100 text-green-800',
-    '3': 'bg-yellow-100 text-yellow-800',
-    '4': 'bg-purple-100 text-purple-800',
-    '5': 'bg-pink-100 text-pink-800',
-    '6': 'bg-indigo-100 text-indigo-800',
+// ─── helpers ──────────────────────────────────────────────────────────────────
+const getSubSectionStyle = (sub: string | null) => {
+  if (!sub) return 'bg-slate-100 text-slate-600';
+  const map: Record<string, string> = {
+    '1': 'bg-sky-100 text-sky-700',
+    '2': 'bg-emerald-100 text-emerald-700',
+    '3': 'bg-amber-100 text-amber-700',
+    '4': 'bg-violet-100 text-violet-700',
+    '5': 'bg-rose-100 text-rose-700',
+    '6': 'bg-teal-100 text-teal-700',
   };
-  
-  return colors[lastChar] || 'bg-gray-100 text-gray-800';
+  return map[sub.slice(-1)] ?? 'bg-slate-100 text-slate-600';
 };
 
-// Helper function for class type colors
-const getClassTypeStyle = (classType: string | null): string => {
-  if (classType === 'Lab') {
-    return 'bg-green-100 text-green-800 border-green-200';
+const getCardStyle = (ct: string | null) =>
+  ct === 'Lab'
+    ? {
+        wrap: 'bg-emerald-50 border border-emerald-200 border-l-4 border-l-emerald-500',
+        strip: 'bg-emerald-500',
+        title: 'text-emerald-900',
+        meta: 'text-emerald-700',
+        code: 'text-emerald-500',
+        badge: 'bg-emerald-100 text-emerald-700',
+      }
+    : {
+        wrap: 'bg-blue-50 border border-blue-200 border-l-4 border-l-blue-500',
+        strip: 'bg-blue-500',
+        title: 'text-blue-900',
+        meta: 'text-blue-700',
+        code: 'text-blue-400',
+        badge: 'bg-blue-100 text-blue-700',
+      };
+
+const getDeptColor = (dept: string) => {
+  const colors = [
+    'from-blue-500 to-indigo-600',
+    'from-emerald-500 to-teal-600',
+    'from-violet-500 to-purple-600',
+    'from-rose-500 to-pink-600',
+    'from-amber-500 to-orange-600',
+    'from-cyan-500 to-sky-600',
+  ];
+  let h = 0;
+  for (let i = 0; i < dept.length; i++) h = dept.charCodeAt(i) + ((h << 5) - h);
+  return colors[Math.abs(h) % colors.length];
+};
+
+const TIME_SLOTS = [
+  { id: 1, name: 'Slot 1', time: '08:30', end: '09:55' },
+  { id: 2, name: 'Slot 2', time: '10:00', end: '11:25' },
+  { id: 3, name: 'Slot 3', time: '11:30', end: '12:55' },
+  { id: 4, name: 'Slot 4', time: '13:30', end: '14:55' },
+  { id: 5, name: 'Slot 5', time: '15:00', end: '16:25' },
+  { id: 6, name: 'Slot 6', time: '16:30', end: '17:55' },
+];
+
+const SUB_PAL: Record<string, { bg: string; fg: string; border: string }> = {
+  '1': { bg: '#f0f9ff', fg: '#0369a1', border: '#bae6fd' },
+  '2': { bg: '#f0fdf4', fg: '#15803d', border: '#bbf7d0' },
+  '3': { bg: '#fffbeb', fg: '#a16207', border: '#fde68a' },
+  '4': { bg: '#f5f3ff', fg: '#6d28d9', border: '#ddd6fe' },
+  '5': { bg: '#fff1f2', fg: '#be185d', border: '#fecdd3' },
+  '6': { bg: '#f0fdfa', fg: '#0f766e', border: '#99f6e4' },
+};
+
+// ─── PNG card (inline styles only) ───────────────────────────────────────────
+const buildPNGCard = (s: ProcessedSchedule): string => {
+  const isLab    = s.class_type === 'Lab';
+  const cardBg   = isLab ? '#ecfdf5' : '#eff6ff';
+  const cardBrd  = isLab ? '#6ee7b7' : '#bfdbfe';
+  const strip    = isLab ? '#059669' : '#3b82f6';
+  const left     = s.isMultiSlot ? '#7c3aed' : strip;
+  const titleClr = isLab ? '#064e3b' : '#1e3a8a';
+  const metaClr  = isLab ? '#065f46' : '#1d4ed8';
+  const codeClr  = isLab ? '#10b981' : '#60a5fa';
+
+  const teacher = s.teacher_name
+    ? `<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+          stroke="${metaClr}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          style="flex-shrink:0;margin-top:1px;">
+          <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+          <path d="M12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+        </svg>
+        <span style="font-size:12px;color:${metaClr};font-weight:500;
+          line-height:1.5;word-break:break-word;">${s.teacher_name}</span>
+      </div>` : '';
+
+  const room = s.rooms?.room_name
+    ? `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+          stroke="${metaClr}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          style="flex-shrink:0;">
+          <path d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+          <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        <span style="font-size:12px;color:${metaClr};font-weight:600;line-height:1.5;">
+          ${s.rooms.room_name}</span>
+      </div>` : '';
+
+  const multi = s.isMultiSlot
+    ? `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+          stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          style="flex-shrink:0;">
+          <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <span style="font-size:12px;color:#7c3aed;font-weight:500;line-height:1.5;">
+          ${s.slotSpan * 1.5}h (Slot ${s.sessionSlots.join('–')})</span>
+      </div>` : '';
+
+  let tags = '';
+  if (s.sub_section) {
+    const p = SUB_PAL[s.sub_section.slice(-1)] ?? { bg:'#f8fafc', fg:'#475569', border:'#e2e8f0' };
+    tags += `<span style="display:inline-flex;align-items:center;background:${p.bg};
+      color:${p.fg};border:1px solid ${p.border};font-size:11px;font-weight:700;
+      padding:3px 8px;border-radius:4px;margin-right:4px;white-space:nowrap;">
+      ${s.sub_section}</span>`;
   }
-  return 'bg-blue-100 text-blue-800 border-blue-200';
+  if (isLab) {
+    tags += `<span style="display:inline-flex;align-items:center;background:#d1fae5;
+      color:#065f46;border:1px solid #6ee7b7;font-size:11px;font-weight:700;
+      padding:3px 8px;border-radius:4px;white-space:nowrap;">Lab</span>`;
+  } else if (s.class_type) {
+    tags += `<span style="display:inline-flex;align-items:center;background:#dbeafe;
+      color:#1e40af;border:1px solid #bfdbfe;font-size:11px;font-weight:700;
+      padding:3px 8px;border-radius:4px;white-space:nowrap;">${s.class_type}</span>`;
+  }
+
+  return `
+    <div style="background:${cardBg};border:1.5px solid ${cardBrd};
+      border-left:3px solid ${left};border-radius:8px;overflow:hidden;
+      margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.07);box-sizing:border-box;">
+      <div style="height:3px;background:${strip};"></div>
+      <div style="padding:10px 12px;">
+        <div style="font-size:13px;font-weight:700;color:${titleClr};
+          line-height:1.5;word-break:break-word;
+          margin-bottom:${s.course_code ? '3px' : '8px'};">${s.course_name}</div>
+        ${s.course_code
+          ? `<div style="font-size:11px;color:${codeClr};font-weight:500;
+              margin-bottom:8px;">${s.course_code}</div>` : ''}
+        ${teacher}${room}${multi}
+        ${tags ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">${tags}</div>` : ''}
+      </div>
+    </div>`;
 };
 
+const buildPNGHTML = (
+  filters: { dept: string; batch: string; section: string },
+  grid: Record<string, Record<number, ProcessedSchedule[]>>,
+  stats: { unique: number; theories: number; labs: number; total: number }
+): string => {
+  const W   = 1600;
+  const TW  = 140;
+  const PAD = 20;
+  const DW  = Math.floor((W - TW - PAD * 2) / DAYS.length);
+
+  const dayHeaders = DAYS.map((d) => `
+    <th style="border:1px solid #334155;padding:14px 8px;font-size:13px;
+      font-weight:700;color:#fff;text-align:center;background:#1e293b;
+      width:${DW}px;min-width:${DW}px;letter-spacing:.05em;box-sizing:border-box;">
+      ${d}</th>`).join('');
+
+  const rows = TIME_SLOTS.map((slot, ri) => {
+    const bg = ri % 2 === 0 ? '#ffffff' : '#f8fafc';
+    const cells = DAYS.map((day) => {
+      const all  = grid[day]?.[slot.id] ?? [];
+      const disp = all.filter((s) => !s.isMultiSlot || s.isFirstSlot);
+      const cont = all.filter((s) => s.isMultiSlot && !s.isFirstSlot);
+      let inner = '', cellBg = bg;
+
+      if (disp.length > 0) {
+        inner = disp.map(buildPNGCard).join('');
+      } else if (cont.length > 0) {
+        cellBg = '#faf5ff';
+        inner = `<div style="display:flex;flex-direction:column;align-items:center;
+          justify-content:center;min-height:90px;color:#8b5cf6;font-size:13px;
+          font-weight:500;text-align:center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+            stroke="#8b5cf6" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" style="margin-bottom:5px;">
+            <path d="M5 15l7-7 7 7"/></svg>Continued</div>`;
+      } else {
+        inner = `<div style="display:flex;align-items:center;justify-content:center;
+          min-height:90px;color:#e2e8f0;font-size:24px;">—</div>`;
+      }
+
+      return `<td style="border:1px solid #e2e8f0;padding:8px;vertical-align:top;
+        background:${cellBg};width:${DW}px;min-width:${DW}px;max-width:${DW}px;
+        overflow:hidden;word-break:break-word;box-sizing:border-box;">${inner}</td>`;
+    }).join('');
+
+    return `<tr>
+      <td style="border:1px solid #e2e8f0;padding:0;background:#1e293b;
+        vertical-align:middle;width:${TW}px;min-width:${TW}px;box-sizing:border-box;">
+        <div style="padding:14px 16px;">
+          <div style="font-weight:800;font-size:14px;color:#f1f5f9;
+            margin-bottom:6px;">${slot.name}</div>
+          <div style="font-size:12px;font-weight:700;color:#ffffff;
+            margin-bottom:2px;">${slot.time}</div>
+          <div style="font-size:11px;color:#94a3b8;">– ${slot.end}</div>
+        </div>
+      </td>${cells}</tr>`;
+  }).join('');
+
+  const footerItems = [
+    { dot:'#64748b', label:'Total Classes', val: stats.unique   },
+    { dot:'#3b82f6', label:'Theory',        val: stats.theories },
+    { dot:'#10b981', label:'Lab',            val: stats.labs    },
+    { dot:'#f59e0b', label:'Total Slots',   val: stats.total   },
+  ].map(({ dot, label, val }) => `
+    <div style="display:flex;align-items:center;gap:7px;">
+      <span style="display:inline-block;width:10px;height:10px;
+        border-radius:50%;background:${dot};"></span>
+      <span style="font-size:13px;color:#64748b;">
+        ${label}: <b style="color:#1e293b;">${val}</b></span>
+    </div>`).join('');
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;
+    width:${W}px;-webkit-font-smoothing:antialiased;}
+  table{border-collapse:collapse;table-layout:fixed;}
+  td,th{overflow:hidden;}
+</style></head><body>
+
+<div style="background:linear-gradient(135deg,#0f172a,#1e293b,#0f172a);
+  padding:38px ${PAD}px 32px;text-align:center;">
+  <div style="font-size:28px;font-weight:800;color:#fff;
+    letter-spacing:-.02em;margin-bottom:8px;">
+    Port City International University</div>
+  <div style="width:80px;height:2px;margin:0 auto 10px;
+    background:linear-gradient(to right,transparent,#60a5fa,transparent);"></div>
+  <div style="font-size:11px;color:#94a3b8;letter-spacing:.14em;
+    text-transform:uppercase;font-weight:600;margin-bottom:28px;">Class Schedule</div>
+  <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">
+    ${[filters.dept, filters.batch, `Section ${filters.section}`].map((t) => `
+      <div style="display:inline-flex;align-items:center;
+        background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);
+        padding:10px 26px;border-radius:8px;">
+        <span style="font-size:14px;font-weight:600;color:#fff;">${t}</span>
+      </div>`).join('')}
+  </div>
+</div>
+
+<div style="background:#f8fafc;border-bottom:2px solid #e2e8f0;
+  padding:13px ${PAD}px;display:flex;align-items:center;
+  justify-content:center;gap:36px;flex-wrap:wrap;">
+  ${[
+    { bg:'#eff6ff', brd:'#bfdbfe', left:'#3b82f6', label:'Theory Class'       },
+    { bg:'#ecfdf5', brd:'#6ee7b7', left:'#059669', label:'Lab Class'          },
+    { bg:'#f5f3ff', brd:'#ddd6fe', left:'#7c3aed', label:'Multi-slot Session' },
+  ].map(({ bg, brd, left, label }) => `
+    <div style="display:flex;align-items:center;gap:9px;">
+      <span style="display:inline-block;width:20px;height:16px;
+        background:${bg};border:1.5px solid ${brd};
+        border-left:3px solid ${left};border-radius:3px;"></span>
+      <span style="font-size:13px;color:#475569;font-weight:500;">${label}</span>
+    </div>`).join('')}
+</div>
+
+<div style="padding:16px ${PAD}px;background:#fff;">
+  <table style="width:${W - PAD * 2}px;border-collapse:collapse;table-layout:fixed;">
+    <colgroup>
+      <col style="width:${TW}px;"/>
+      ${DAYS.map(() => `<col style="width:${DW}px;"/>`).join('')}
+    </colgroup>
+    <thead><tr>
+      <th style="border:1px solid #334155;padding:14px 12px;font-size:12px;
+        font-weight:700;color:#fff;text-align:left;background:#1e293b;
+        width:${TW}px;min-width:${TW}px;box-sizing:border-box;">TIME</th>
+      ${dayHeaders}
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+</div>
+
+<div style="background:#f1f5f9;border-top:2px solid #e2e8f0;
+  padding:16px ${PAD}px;display:flex;justify-content:space-between;
+  align-items:center;flex-wrap:wrap;gap:12px;">
+  <div style="display:flex;gap:30px;flex-wrap:wrap;align-items:center;">
+    ${footerItems}
+  </div>
+  <div style="font-size:12px;color:#94a3b8;">
+    Generated: ${new Date().toLocaleDateString('en-US', {
+      weekday:'long', year:'numeric', month:'long', day:'numeric',
+    })}
+  </div>
+</div>
+</body></html>`;
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
 export default function PublicRoutinePage() {
-  const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
-  const [batchSections, setBatchSections] = useState<BatchSection[]>([]);
+  const [allSchedules, setAllSchedules]           = useState<Schedule[]>([]);
+  const [batchSections, setBatchSections]         = useState<BatchSection[]>([]);
   const [selectedSchedules, setSelectedSchedules] = useState<Schedule[]>([]);
-  
-  const [filters, setFilters] = useState({
-    dept: '',
-    batch: '',
-    section: '',
-  });
-  
-  const [loading, setLoading] = useState(true);
+  const [filters, setFilters]  = useState({ dept:'', batch:'', section:'' });
+  const [loading, setLoading]  = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [showRoutine, setShowRoutine] = useState(false);
+  // mobile: which day tab is active
+  const [activeDay, setActiveDay] = useState(0);
+  // desktop vs mobile view toggle handled by CSS
   const routineRef = useRef<HTMLDivElement>(null);
 
-  // Fetch all schedules on mount
-  useEffect(() => {
-    fetchAllSchedules();
-  }, []);
+  useEffect(() => { fetchAll(); }, []);
 
-  // Filter schedules when filters change
   useEffect(() => {
     if (filters.dept && filters.batch && filters.section) {
-      const filtered = allSchedules.filter(
-        (s) =>
-          s.department === filters.dept &&
-          s.batch_name === filters.batch &&
-          s.section_name === filters.section
+      setSelectedSchedules(
+        allSchedules.filter(
+          (s) =>
+            s.department   === filters.dept  &&
+            s.batch_name   === filters.batch &&
+            s.section_name === filters.section
+        )
       );
-      setSelectedSchedules(filtered);
       setShowRoutine(true);
+      // default to today if available
+     const todayIdx = DAYS.indexOf(
+  new Date().toLocaleDateString('en-US', { weekday: 'long' }) as (typeof DAYS)[number]
+);
+      setActiveDay(todayIdx >= 0 ? todayIdx : 0);
     } else {
       setSelectedSchedules([]);
       setShowRoutine(false);
     }
   }, [filters, allSchedules]);
 
-  const fetchAllSchedules = async () => {
+  const fetchAll = async () => {
     try {
-      const res = await fetch('/api/schedules');
+      const res  = await fetch('/api/schedules');
       const data = await res.json();
-
       if (data.success) {
         setAllSchedules(data.data);
-
-        const unique: { [key: string]: BatchSection } = {};
-
-        (data.data as Schedule[]).forEach((schedule) => {
-          if (schedule.batch_name && schedule.section_name) {
-            const key = `${schedule.department}-${schedule.batch_name}-${schedule.section_name}`;
-
-            if (!unique[key]) {
-              unique[key] = {
-                department: schedule.department,
-                batch_name: schedule.batch_name,
-                section_name: schedule.section_name,
-                count: 0,
-              };
-            }
-            unique[key].count++;
+        const uniq: Record<string, BatchSection> = {};
+        (data.data as Schedule[]).forEach((s) => {
+          if (s.batch_name && s.section_name) {
+            const k = `${s.department}-${s.batch_name}-${s.section_name}`;
+            if (!uniq[k]) uniq[k] = {
+              department: s.department, batch_name: s.batch_name,
+              section_name: s.section_name, count: 0,
+            };
+            uniq[k].count++;
           }
         });
-
-        setBatchSections(Object.values(unique));
+        setBatchSections(Object.values(uniq));
       }
-    } catch (err) {
-      console.error('Failed to fetch schedules:', err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   };
 
-  // Derived filter options
-  const departments = [...new Set(batchSections.map((bs) => bs.department))];
-  
-  const batches = [
-    ...new Set(
-      batchSections
-        .filter((bs) => !filters.dept || bs.department === filters.dept)
-        .map((bs) => bs.batch_name)
-    ),
-  ];
-  
-  const sections = [
-    ...new Set(
-      batchSections
-        .filter(
-          (bs) =>
-            (!filters.dept || bs.department === filters.dept) &&
-            (!filters.batch || bs.batch_name === filters.batch)
-        )
-        .map((bs) => bs.section_name)
-    ),
-  ];
+  const departments = [...new Set(batchSections.map((b) => b.department))];
+  const batches = [...new Set(
+    batchSections.filter((b) => !filters.dept || b.department === filters.dept)
+      .map((b) => b.batch_name)
+  )];
+  const sections = [...new Set(
+    batchSections.filter((b) =>
+      (!filters.dept  || b.department === filters.dept) &&
+      (!filters.batch || b.batch_name  === filters.batch)
+    ).map((b) => b.section_name)
+  )];
 
-  const handleQuickSelect = (bs: BatchSection) => {
-    setFilters({
-      dept: bs.department,
-      batch: bs.batch_name,
-      section: bs.section_name,
-    });
-  };
-
-  const handleClearFilters = () => {
-    setFilters({ dept: '', batch: '', section: '' });
-    setShowRoutine(false);
-  };
-
- // Download PNG function
-const handleDownload = async () => {
-  if (!routineRef.current) return;
-
-  setDownloading(true);
-
-  try {
-    const html2canvas = (await import('html2canvas')).default;
-    const element = routineRef.current;
-
-    // Store original styles
-    const originalStyle = {
-      width: element.style.width,
-      maxWidth: element.style.maxWidth,
-      overflow: element.style.overflow,
-      position: element.style.position,
-    };
-
-    // Find the table container and store its original overflow
-    const tableContainer = element.querySelector('.overflow-x-auto') as HTMLElement;
-    const originalTableOverflow = tableContainer?.style.overflow;
-
-    // Temporarily modify styles for full capture
-    element.style.width = 'fit-content';
-    element.style.maxWidth = 'none';
-    element.style.overflow = 'visible';
-    
-    if (tableContainer) {
-      tableContainer.style.overflow = 'visible';
-    }
-
-    // Wait for styles to apply
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    // Calculate the actual full width needed
-    const table = element.querySelector('table');
-    const fullWidth = Math.max(
-      element.scrollWidth,
-      element.offsetWidth,
-      table?.scrollWidth || 0,
-      1200
-    );
-
-    // Use type assertion to bypass TypeScript strict checking
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      width: fullWidth,
-      windowWidth: fullWidth,
-      scrollX: 0,
-      scrollY: 0,
-    } as Parameters<typeof html2canvas>[1]);
-
-    // Restore original styles
-    element.style.width = originalStyle.width;
-    element.style.maxWidth = originalStyle.maxWidth;
-    element.style.overflow = originalStyle.overflow;
-    
-    if (tableContainer) {
-      tableContainer.style.overflow = originalTableOverflow || '';
-    }
-
-    // Download the image
-    const link = document.createElement('a');
-    link.download = `Routine-${filters.dept}-${filters.batch}-Section${filters.section}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-
-  } catch (error) {
-    console.error('Download error:', error);
-    alert('Failed to download. Please try again.');
-  } finally {
-    setDownloading(false);
-  }
-};
-
-  // Process schedules to identify multi-slot classes
+  // ── process ──
   const processSchedules = (): Map<string, ProcessedSchedule[]> => {
     const sessionMap = new Map<string, Schedule[]>();
-    
-    selectedSchedules.forEach((schedule) => {
-      if (schedule.session_id) {
-        if (!sessionMap.has(schedule.session_id)) {
-          sessionMap.set(schedule.session_id, []);
-        }
-        sessionMap.get(schedule.session_id)!.push(schedule);
+    selectedSchedules.forEach((s) => {
+      if (s.session_id) {
+        if (!sessionMap.has(s.session_id)) sessionMap.set(s.session_id, []);
+        sessionMap.get(s.session_id)!.push(s);
       }
     });
-
-    const processedMap = new Map<string, ProcessedSchedule[]>();
-
+    const out = new Map<string, ProcessedSchedule[]>();
     selectedSchedules.forEach((schedule) => {
       const key = `${schedule.day_of_week}-${schedule.time_slot_id}`;
-      
-      if (!processedMap.has(key)) {
-        processedMap.set(key, []);
-      }
-
-      let isMultiSlot = false;
-      let slotSpan = 1;
-      let isFirstSlot = true;
-      let sessionSlots: number[] = [schedule.time_slot_id];
-
+      if (!out.has(key)) out.set(key, []);
+      let isMultiSlot = false, slotSpan = 1, isFirstSlot = true;
+      let sessionSlots = [schedule.time_slot_id];
       if (schedule.session_id && sessionMap.has(schedule.session_id)) {
-        const sessionSchedules = sessionMap.get(schedule.session_id)!;
-        if (sessionSchedules.length > 1) {
-          isMultiSlot = true;
-          slotSpan = sessionSchedules.length;
-          sessionSlots = sessionSchedules.map((s) => s.time_slot_id).sort((a, b) => a - b);
-          isFirstSlot = schedule.time_slot_id === Math.min(...sessionSlots);
+        const grp = sessionMap.get(schedule.session_id)!;
+        if (grp.length > 1) {
+          isMultiSlot  = true; slotSpan = grp.length;
+          sessionSlots = grp.map((s) => s.time_slot_id).sort((a,b) => a-b);
+          isFirstSlot  = schedule.time_slot_id === sessionSlots[0];
         }
       }
-
-      processedMap.get(key)!.push({
-        ...schedule,
-        isMultiSlot,
-        slotSpan,
-        isFirstSlot,
-        sessionSlots,
-      });
+      out.get(key)!.push({ ...schedule, isMultiSlot, slotSpan, isFirstSlot, sessionSlots });
     });
-
-    return processedMap;
+    return out;
   };
 
-  // Build schedule grid
-  const buildScheduleGrid = () => {
-    const grid: { [day: string]: { [slot: number]: ProcessedSchedule[] } } = {};
-    
-    DAYS.forEach((day) => {
-      grid[day] = {};
-      for (let i = 1; i <= 6; i++) {
-        grid[day][i] = [];
-      }
-    });
-
-    const processedMap = processSchedules();
-
-    processedMap.forEach((schedules, key) => {
+  const buildGrid = () => {
+    const grid: Record<string, Record<number, ProcessedSchedule[]>> = {};
+    DAYS.forEach((day) => { grid[day] = {}; for (let i=1;i<=6;i++) grid[day][i]=[]; });
+    processSchedules().forEach((schedules, key) => {
       const [day, slotStr] = key.split('-');
       const slot = parseInt(slotStr);
-      
-      if (grid[day] && grid[day][slot] !== undefined) {
-        grid[day][slot] = schedules;
-      }
+      if (grid[day]?.[slot] !== undefined) grid[day][slot] = schedules;
     });
-
     return grid;
   };
 
-  const scheduleGrid = buildScheduleGrid();
+  const scheduleGrid = buildGrid();
 
-  const timeSlots = [
-    { id: 1, name: 'Slot 1', time: '08:30 - 09:55' },
-    { id: 2, name: 'Slot 2', time: '10:00 - 11:25' },
-    { id: 3, name: 'Slot 3', time: '11:30 - 12:55' },
-    { id: 4, name: 'Slot 4', time: '13:30 - 14:55' },
-    { id: 5, name: 'Slot 5', time: '15:00 - 16:25' },
-    { id: 6, name: 'Slot 6', time: '16:30 - 17:55' },
-  ];
-
-  const getUniqueClassCount = () => {
-    const sessionIds = new Set<string>();
-    let count = 0;
-
-    selectedSchedules.forEach((schedule) => {
-      if (schedule.session_id) {
-        if (!sessionIds.has(schedule.session_id)) {
-          sessionIds.add(schedule.session_id);
-          count++;
-        }
-      } else {
-        count++;
-      }
+  const getUniqueCount = () => {
+    const seen = new Set<string>(); let n = 0;
+    selectedSchedules.forEach((s) => {
+      if (s.session_id) { if (!seen.has(s.session_id)) { seen.add(s.session_id); n++; } }
+      else n++;
     });
-
-    return count;
+    return n;
   };
 
-  if (loading) {
+  const getTypeCounts = () => {
+    const seen = new Set<string>(); let labs=0, theories=0;
+    selectedSchedules.forEach((s) => {
+      const k = s.session_id ?? `_${s.id}`;
+      if (!seen.has(k)) { seen.add(k); if(s.class_type==='Lab') labs++; else theories++; }
+    });
+    return { labs, theories };
+  };
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      const grid = buildGrid();
+      const { labs, theories } = getTypeCounts();
+      const html = buildPNGHTML(filters, grid, {
+        unique: getUniqueCount(), theories, labs, total: selectedSchedules.length,
+      });
+      const res = await fetch('/api/download-routine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html }),
+      });
+      if (!res.ok) throw new Error('Server error');
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url;
+      a.download = `Routine_${filters.dept}_${filters.batch}_Sec${filters.section}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert('Download failed. Please try again.');
+    } finally { setDownloading(false); }
+  };
+
+const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' }) as (typeof DAYS)[number];
+
+  // ── schedule card (shared UI component) ──────────────────────────────────
+  const ScheduleCard = ({ schedule }: { schedule: ProcessedSchedule }) => {
+    const cs    = getCardStyle(schedule.class_type);
+    const isLab = schedule.class_type === 'Lab';
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
-          <p className="mt-4 text-gray-600">Loading routines...</p>
+      <div className={`rounded-xl overflow-hidden shadow-sm ${cs.wrap}
+        ${schedule.isMultiSlot ? 'border-l-violet-500' : ''}`}>
+        <div className={`h-1 w-full ${cs.strip}`} />
+        <div className="p-3">
+          <p className={`font-bold text-sm leading-snug mb-1 break-words ${cs.title}`}>
+            {schedule.course_name}
+          </p>
+          {schedule.course_code && (
+            <p className={`text-xs font-medium mb-2 ${cs.code}`}>
+              {schedule.course_code}
+            </p>
+          )}
+          {schedule.teacher_name && (
+            <div className={`flex items-start gap-1.5 text-xs mb-1 ${cs.meta}`}>
+              <svg className="w-3.5 h-3.5 flex-shrink-0 mt-px" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+              <span className="break-words leading-snug font-medium">
+                {schedule.teacher_name}
+              </span>
+            </div>
+          )}
+          {schedule.rooms?.room_name && (
+            <div className={`flex items-center gap-1.5 text-xs mb-1 font-semibold ${cs.meta}`}>
+              <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+              {schedule.rooms.room_name}
+            </div>
+          )}
+          {schedule.isMultiSlot && (
+            <div className="flex items-center gap-1.5 text-xs text-violet-600 font-medium mb-1">
+              <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              {schedule.slotSpan * 1.5}h · Slot {schedule.sessionSlots.join('–')}
+            </div>
+          )}
+          <div className="flex flex-wrap gap-1 mt-2">
+            {schedule.sub_section && (
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold
+                ${getSubSectionStyle(schedule.sub_section)}`}>
+                {schedule.sub_section}
+              </span>
+            )}
+            {schedule.class_type && (
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${cs.badge}`}>
+                {schedule.class_type}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     );
-  }
+  };
+
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2
+          border-blue-600 mx-auto" />
+        <p className="mt-4 text-gray-500 text-sm">Loading routines...</p>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Header */}
+    <div className="max-w-full mx-auto px-3 sm:px-4 py-6 sm:py-8">
+
+      {/* ── Header ── */}
       <div className="text-center mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
-          📅 Class Routine
+        <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2 tracking-tight">
+          Class Routine
         </h1>
-        <p className="text-gray-600 text-lg">
-          View class schedules for all departments
+        <p className="text-gray-500 text-sm sm:text-base">
+          Browse and download class schedules
         </p>
       </div>
 
-      {/* Quick Select Cards */}
+      {/* ── Quick select ── */}
       {batchSections.length > 0 && !showRoutine && (
-        <Card
-          title="📚 Available Routines"
-          subtitle="Click to view routine"
-          className="mb-8"
-        >
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {batchSections.map((bs, index) => (
-              <div
-                key={index}
-                onClick={() => handleQuickSelect(bs)}
-                className="border-2 border-gray-200 rounded-xl p-4 cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 group"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <Badge variant="default">{bs.department}</Badge>
-                  <span className="text-xs text-gray-500">
-                    {bs.count} classes
-                  </span>
-                </div>
-                <h3 className="font-bold text-gray-900 group-hover:text-blue-700">
-                  {bs.batch_name}
-                </h3>
-                <p className="text-sm text-gray-600">Section {bs.section_name}</p>
-              </div>
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-1 h-5 bg-blue-600 rounded-full" />
+            <h2 className="text-base sm:text-lg font-semibold text-gray-800">
+              Available Routines
+            </h2>
+            <span className="text-sm text-gray-400">({batchSections.length})</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4
+            lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
+            {batchSections.map((bs, i) => (
+              <button key={i} onClick={() =>
+                setFilters({ dept:bs.department, batch:bs.batch_name, section:bs.section_name })}
+                className="group relative bg-white border border-gray-200 rounded-xl p-3
+                  text-left cursor-pointer hover:shadow-md hover:border-blue-300
+                  hover:-translate-y-0.5 transition-all duration-200 overflow-hidden
+                  active:scale-95">
+                <div className={`absolute top-0 left-0 right-0 h-1 rounded-t-xl
+                  bg-gradient-to-r ${getDeptColor(bs.department)}`} />
+                <p className="text-[10px] font-medium text-gray-400 mt-1 mb-1 truncate">
+                  {bs.department}
+                </p>
+                <p className="font-bold text-gray-900 text-sm group-hover:text-blue-600
+                  transition-colors leading-tight">{bs.batch_name}</p>
+                <p className="text-xs text-gray-500 mt-0.5">Sec {bs.section_name}</p>
+                <p className="text-[10px] text-gray-400 mt-1">{bs.count} slots</p>
+              </button>
             ))}
           </div>
-        </Card>
+        </div>
       )}
 
-      {/* Filter Controls */}
-      <Card className="mb-8">
-        <div className="grid md:grid-cols-3 gap-4 mb-4">
-          <Select
-            label="Department"
-            value={filters.dept}
-            onChange={(e) =>
-              setFilters({ dept: e.target.value, batch: '', section: '' })
-            }
-            options={departments.map((dept) => ({ value: dept, label: dept }))}
-            placeholder="Select department"
-          />
-
+      {/* ── Filters ── */}
+      <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 mb-6 shadow-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
+          <Select label="Department" value={filters.dept}
+            onChange={(e) => setFilters({ dept:e.target.value, batch:'', section:'' })}
+            options={departments.map((d) => ({ value:d, label:d }))}
+            placeholder="Select department" />
           {filters.dept && (
-            <Select
-              label="Batch"
-              value={filters.batch}
-              onChange={(e) =>
-                setFilters({ ...filters, batch: e.target.value, section: '' })
-              }
-              options={batches.map((batch) => ({ value: batch, label: batch }))}
-              placeholder="Select batch"
-            />
+            <Select label="Batch" value={filters.batch}
+              onChange={(e) => setFilters({ ...filters, batch:e.target.value, section:'' })}
+              options={batches.map((b) => ({ value:b, label:b }))}
+              placeholder="Select batch" />
           )}
-
           {filters.batch && (
-            <Select
-              label="Section"
-              value={filters.section}
-              onChange={(e) =>
-                setFilters({ ...filters, section: e.target.value })
-              }
-              options={sections.map((section) => ({
-                value: section,
-                label: `Section ${section}`,
-              }))}
-              placeholder="Select section"
-            />
+            <Select label="Section" value={filters.section}
+              onChange={(e) => setFilters({ ...filters, section:e.target.value })}
+              options={sections.map((s) => ({ value:s, label:`Section ${s}` }))}
+              placeholder="Select section" />
           )}
         </div>
-
         {showRoutine && (
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3 pt-3 border-t border-gray-100">
             <Button onClick={handleDownload} disabled={downloading}>
-              {downloading ? '⏳ Downloading...' : '📥 Download PNG'}
+              {downloading ? (
+                <span className="flex items-center gap-2 text-sm">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10"
+                      stroke="currentColor" strokeWidth="4" fill="none"/>
+                    <path className="opacity-75" fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>Generating…
+                </span>
+              ) : (
+                <span className="flex items-center gap-2 text-sm">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                  </svg>Download PNG
+                </span>
+              )}
             </Button>
-            <Button variant="secondary" onClick={handleClearFilters}>
-              ✕ Clear Selection
+            <Button variant="secondary" onClick={() => {
+              setFilters({ dept:'', batch:'', section:'' }); setShowRoutine(false);
+            }}>
+              <span className="text-sm">✕ Clear</span>
             </Button>
           </div>
         )}
-      </Card>
+      </div>
 
-      {/* Routine Display */}
+      {/* ══════════════════════ ROUTINE ══════════════════════ */}
       {showRoutine && (
-        <div 
-          ref={routineRef} 
-          className="bg-white"
-          data-routine-container
-        >
-          {/* Header Banner */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-t-xl p-6 text-center">
-            <h2 className="text-2xl font-bold mb-2">
+        <div ref={routineRef}
+          className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+
+          {/* Header banner */}
+          <div className="bg-gradient-to-r from-slate-800 via-slate-900 to-slate-800
+            text-white px-4 sm:px-8 py-5 sm:py-7 text-center">
+            <h2 className="text-lg sm:text-2xl font-bold tracking-tight mb-1">
               Port City International University
             </h2>
-            <p className="text-blue-100 mb-4">Class Routine</p>
-
-            <div className="flex justify-center gap-3 flex-wrap">
-              <span className="bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm">
-                📚 {filters.dept}
-              </span>
-              <span className="bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm">
-                🎓 {filters.batch}
-              </span>
-              <span className="bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm">
-                👥 Section {filters.section}
-              </span>
+            <div className="w-16 sm:w-24 h-px bg-gradient-to-r from-transparent
+              via-blue-400 to-transparent mx-auto my-2" />
+            <p className="text-slate-400 text-[10px] sm:text-xs font-medium
+              tracking-widest uppercase mb-3 sm:mb-4">Class Schedule</p>
+            <div className="flex justify-center gap-2 flex-wrap">
+              {[filters.dept, filters.batch, `Section ${filters.section}`].map((t) => (
+                <span key={t} className="bg-white/10 border border-white/15 text-white
+                  text-xs sm:text-sm font-medium px-3 sm:px-4 py-1 sm:py-1.5 rounded-lg">
+                  {t}
+                </span>
+              ))}
             </div>
           </div>
 
-          {/* Legend */}
-          <div className="bg-gray-50 border-b px-6 py-3">
-            <div className="flex flex-wrap gap-4 justify-center text-sm">
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 rounded bg-blue-100 border border-blue-200"></span>
-                <span className="text-gray-600">Theory</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 rounded bg-green-100 border border-green-200"></span>
-                <span className="text-gray-600">Lab</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 rounded bg-purple-100 border border-purple-200"></span>
-                <span className="text-gray-600">Multi-slot</span>
-              </div>
+          {selectedSchedules.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="text-5xl mb-4">📭</div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-1">No Classes Found</h3>
+              <p className="text-gray-400 text-sm">No schedules for this section yet.</p>
             </div>
-          </div>
+          ) : (
+            <>
+              {/* ════════════════════════════════════════
+                  MOBILE VIEW  — Day tabs + slot cards
+                  ════════════════════════════════════════ */}
+              <div className="block lg:hidden">
+                {/* Day tab bar */}
+                <div className="bg-slate-50 border-b border-slate-200">
+                  <div className="flex overflow-x-auto scrollbar-hide">
+                    {DAYS.map((day, idx) => {
+                      const isToday   = day === todayName;
+                      const isActive  = idx === activeDay;
+                      const daySlots  = TIME_SLOTS.flatMap(
+                        (sl) => scheduleGrid[day]?.[sl.id] ?? []
+                      ).filter((s) => !s.isMultiSlot || s.isFirstSlot);
+                      const hasClass  = daySlots.length > 0;
 
-          {/* Schedule Table */}
-          <Card className="rounded-t-none border-t-0">
-            {selectedSchedules.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">📭</div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No Classes Found
-                </h3>
-                <p className="text-gray-500">
-                  No schedules have been added for this section yet.
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse min-w-[900px]">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border border-gray-300 px-3 py-3 text-left text-sm font-semibold text-gray-700 w-28 min-w-[100px]">
-                        Time / Day
-                      </th>
-                      {DAYS.map((day) => (
-                        <th
-                          key={day}
-                          className="border border-gray-300 px-3 py-3 text-center text-sm font-semibold text-gray-700 min-w-[130px]"
-                        >
-                          {day}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
+                      return (
+                        <button key={day} onClick={() => setActiveDay(idx)}
+                          className={`flex-shrink-0 flex flex-col items-center
+                            px-4 py-3 text-xs font-semibold border-b-2
+                            transition-all duration-200 relative
+                            ${isActive
+                              ? isToday
+                                ? 'border-amber-500 text-amber-600 bg-amber-50'
+                                : 'border-blue-600 text-blue-700 bg-blue-50'
+                              : 'border-transparent text-slate-500 hover:text-slate-700'
+                            }`}>
+                          {/* Today dot */}
+                          {isToday && (
+                            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5
+                              rounded-full bg-amber-400" />
+                          )}
+                          {/* Short day name */}
+                          <span className="text-[11px] font-bold">
+                            {day.slice(0, 3).toUpperCase()}
+                          </span>
+                          {/* Class count badge */}
+                          {hasClass ? (
+                            <span className={`mt-1 text-[9px] px-1.5 py-0.5 rounded-full
+                              font-bold ${isActive
+                                ? isToday
+                                  ? 'bg-amber-500 text-white'
+                                  : 'bg-blue-600 text-white'
+                                : 'bg-slate-200 text-slate-600'}`}>
+                              {daySlots.length}
+                            </span>
+                          ) : (
+                            <span className="mt-1 text-[9px] text-slate-300 font-medium">
+                              —
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
 
-                  <tbody>
-                    {timeSlots.map((slot) => (
-                      <tr key={slot.id}>
-                        {/* Time Slot Cell */}
-                        <td className="border border-gray-300 px-3 py-3 bg-gray-50">
-                          <div className="font-medium text-gray-900 text-sm">
-                            {slot.name}
+                  {/* Active day label */}
+                  <div className="px-4 py-2 flex items-center gap-2">
+                    <span className="text-sm font-bold text-slate-800">
+                      {DAYS[activeDay]}
+                    </span>
+                    {DAYS[activeDay] === todayName && (
+                      <span className="text-[10px] bg-amber-100 text-amber-700
+                        px-2 py-0.5 rounded-full font-semibold">Today</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Slots for active day */}
+                <div className="p-3 space-y-3">
+                  {TIME_SLOTS.map((slot) => {
+                    const all     = scheduleGrid[DAYS[activeDay]]?.[slot.id] ?? [];
+                    const display = all.filter((s) => !s.isMultiSlot || s.isFirstSlot);
+                    const cont    = all.filter((s) => s.isMultiSlot && !s.isFirstSlot);
+
+                    return (
+                      <div key={slot.id}
+                        className="flex gap-2 sm:gap-3">
+                        {/* Time label */}
+                        <div className="flex-shrink-0 w-16 sm:w-20">
+                          <div className="bg-slate-800 rounded-lg px-2 py-2.5
+                            text-center h-full flex flex-col
+                            justify-center items-center">
+                            <span className="text-[9px] font-bold text-blue-400
+                              uppercase tracking-wide">{slot.name}</span>
+                            <span className="text-white font-bold text-xs mt-1
+                              tabular-nums">{slot.time}</span>
+                            <span className="text-slate-400 text-[9px] tabular-nums">
+                              {slot.end}
+                            </span>
                           </div>
-                          <div className="text-xs text-gray-500">{slot.time}</div>
-                        </td>
+                        </div>
 
-                        {/* Day Cells */}
+                        {/* Cards */}
+                        <div className="flex-1 min-w-0">
+                          {display.length > 0 ? (
+                            <div className="space-y-2">
+                              {display.map((s) => (
+                                <ScheduleCard key={s.id} schedule={s} />
+                              ))}
+                            </div>
+                          ) : cont.length > 0 ? (
+                            <div className="flex items-center justify-center h-full
+                              min-h-[60px] rounded-xl bg-violet-50 border
+                              border-violet-100 text-violet-400">
+                              <div className="text-center">
+                                <svg className="w-5 h-5 mx-auto" fill="none"
+                                  viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round"
+                                    strokeWidth={2} d="M5 15l7-7 7 7"/>
+                                </svg>
+                                <p className="text-[10px] font-medium mt-0.5">Continued</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center
+                              min-h-[56px] rounded-xl bg-slate-50 border
+                              border-dashed border-slate-200">
+                              <span className="text-slate-300 text-xs">No class</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ════════════════════════════════════════
+                  DESKTOP VIEW — full scrollable table
+                  ════════════════════════════════════════ */}
+              <div className="hidden lg:block">
+                {/* Legend */}
+                <div className="bg-slate-50 border-b border-slate-200 px-4 py-2.5">
+                  <div className="flex flex-wrap gap-4 justify-center text-xs font-medium">
+                    {[
+                      { cls:'bg-blue-50 border-l-2 border-l-blue-500 border border-blue-200',
+                        label:'Theory' },
+                      { cls:'bg-emerald-50 border-l-2 border-l-emerald-500 border border-emerald-200',
+                        label:'Lab' },
+                      { cls:'bg-violet-50 border-l-2 border-l-violet-500 border border-violet-200',
+                        label:'Multi-slot' },
+                    ].map(({ cls, label }) => (
+                      <div key={label} className="flex items-center gap-1.5">
+                        <span className={`w-5 h-3 rounded-sm inline-block ${cls}`} />
+                        <span className="text-slate-600">{label}</span>
+                      </div>
+                    ))}
+                    {DAYS.includes(todayName) && (
+                      <div className="flex items-center gap-1.5 ml-2 pl-3
+                        border-l border-slate-300">
+                        <span className="w-3 h-3 rounded-full bg-amber-400
+                          inline-block animate-pulse" />
+                        <span className="text-slate-600">Today ({todayName})</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="border-collapse w-full"
+                    style={{ minWidth:`${DAYS.length * 220 + 160}px` }}>
+                    <thead>
+                      <tr>
+                        <th className="bg-slate-800 text-white border border-slate-700
+                          px-4 py-3 text-left text-xs font-bold uppercase tracking-wider
+                          sticky left-0 z-20" style={{ minWidth:'160px', width:'160px' }}>
+                          Time
+                        </th>
                         {DAYS.map((day) => {
-                          const schedules = scheduleGrid[day]?.[slot.id] ?? [];
-                          const hasSchedules = schedules.length > 0;
-
-                          const displaySchedules = schedules.filter(
-                            (s) => !s.isMultiSlot || s.isFirstSlot
-                          );
-
-                          const continuedSchedules = schedules.filter(
-                            (s) => s.isMultiSlot && !s.isFirstSlot
-                          );
-
+                          const isToday = day === todayName;
                           return (
-                            <td
-                              key={day}
-                              className={`border border-gray-300 px-2 py-2 text-xs align-top min-w-[130px] ${
-                                hasSchedules ? 'bg-blue-50/50' : ''
-                              }`}
-                            >
-                              {displaySchedules.length > 0 ? (
-                                <div className="space-y-2">
-                                  {displaySchedules.map((schedule) => (
-                                    <div
-                                      key={schedule.id}
-                                      className={`rounded-lg p-2 border ${getClassTypeStyle(schedule.class_type)} ${
-                                        schedule.isMultiSlot
-                                          ? 'border-l-4 border-l-purple-500'
-                                          : ''
-                                      }`}
-                                    >
-                                      <div className="font-semibold text-gray-900 mb-1">
-                                        {schedule.course_name}
-                                      </div>
-
-                                      {schedule.course_code && (
-                                        <div className="text-gray-600 text-[11px]">
-                                          {schedule.course_code}
-                                        </div>
-                                      )}
-
-                                      {schedule.teacher_name && (
-                                        <div className="text-gray-600 text-[11px]">
-                                          👨‍🏫 {schedule.teacher_name}
-                                        </div>
-                                      )}
-
-                                      {schedule.rooms?.room_name && (
-                                        <div className="text-gray-700 text-[11px] font-medium">
-                                          📍 {schedule.rooms.room_name}
-                                        </div>
-                                      )}
-
-                                      {schedule.isMultiSlot && (
-                                        <div className="text-purple-700 text-[10px] font-medium mt-1">
-                                          ⏱️ {schedule.slotSpan * 1.5}h (Slot{' '}
-                                          {schedule.sessionSlots.join('-')})
-                                        </div>
-                                      )}
-
-                                      <div className="pt-1.5 flex flex-wrap gap-1">
-                                        {schedule.sub_section && (
-                                          <span
-                                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${getSubSectionColor(schedule.sub_section)}`}
-                                          >
-                                            👥 {schedule.sub_section}
-                                          </span>
-                                        )}
-
-                                        {schedule.class_type === 'Lab' && (
-                                          <span className="inline-block bg-green-200 text-green-800 px-2 py-0.5 rounded text-[10px] font-medium">
-                                            🔬 Lab
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : continuedSchedules.length > 0 ? (
-                                <div className="h-full flex items-center justify-center min-h-[60px]">
-                                  <div className="text-purple-500 text-center">
-                                    <div className="text-lg">↑</div>
-                                    <div className="text-[10px]">Continued</div>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="text-gray-300 text-center py-4">—</div>
-                              )}
-                            </td>
+                            <th key={day}
+                              className={`border border-slate-700 px-3 py-3 text-center
+                                text-xs font-bold uppercase tracking-wider
+                                ${isToday ? 'bg-amber-500 text-white' : 'bg-slate-800 text-white'}`}
+                              style={{ minWidth:'220px' }}>
+                              <div className="flex items-center justify-center gap-1.5">
+                                {isToday && (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-white
+                                    animate-pulse" />
+                                )}
+                                {day}
+                                {isToday && (
+                                  <span className="text-[10px] bg-white/20 px-1.5 py-0.5
+                                    rounded-full normal-case font-medium">Today</span>
+                                )}
+                              </div>
+                            </th>
                           );
                         })}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    </thead>
+                    <tbody>
+                      {TIME_SLOTS.map((slot, ri) => (
+                        <tr key={slot.id}>
+                          {/* Time cell */}
+                          <td className="border border-slate-200 p-0 align-middle
+                            sticky left-0 z-10 bg-slate-800"
+                            style={{ minWidth:'160px', width:'160px' }}>
+                            <div className="px-4 py-4">
+                              <div className="inline-flex items-center gap-1.5
+                                bg-blue-600 text-white text-xs font-bold
+                                px-2.5 py-1 rounded-full mb-2.5 shadow-sm">
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24"
+                                  stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round"
+                                    strokeWidth={2.5}
+                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                {slot.name}
+                              </div>
+                              <div className="text-sm font-bold text-white tabular-nums">
+                                {slot.time}
+                              </div>
+                              <div className="text-xs text-slate-400 mt-0.5 tabular-nums">
+                                – {slot.end}
+                              </div>
+                              <div className="mt-2">
+                                <span className="text-[10px] text-slate-400 bg-slate-700
+                                  px-2 py-0.5 rounded-full border border-slate-600">
+                                  85 min
+                                </span>
+                              </div>
+                            </div>
+                          </td>
 
-            {/* Footer Info */}
-            {selectedSchedules.length > 0 && (
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                <div className="flex flex-wrap justify-between items-center gap-4 text-sm text-gray-600">
-                  <div className="flex gap-4">
-                    <span>
-                      <span className="font-medium">Total Classes:</span>{' '}
-                      {getUniqueClassCount()}
-                    </span>
-                    <span>
-                      <span className="font-medium">Total Slots:</span>{' '}
-                      {selectedSchedules.length}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="font-medium">Generated:</span>{' '}
-                    {new Date().toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </div>
+                          {/* Day cells */}
+                          {DAYS.map((day) => {
+                            const isToday = day === todayName;
+                            const all     = scheduleGrid[day]?.[slot.id] ?? [];
+                            const display = all.filter((s) => !s.isMultiSlot || s.isFirstSlot);
+                            const cont    = all.filter((s) => s.isMultiSlot && !s.isFirstSlot);
+                            const rowBg   = ri % 2 === 0 ? 'bg-white' : 'bg-slate-50/50';
+
+                            return (
+                              <td key={day}
+                                className={`border px-2 py-2 align-top
+                                  ${isToday
+                                    ? 'border-amber-200 bg-amber-50/30'
+                                    : `border-slate-200 ${rowBg}`}`}
+                                style={{ minWidth:'220px' }}>
+                                {display.length > 0 ? (
+                                  <div className="space-y-2">
+                                    {display.map((s) => (
+                                      <ScheduleCard key={s.id} schedule={s} />
+                                    ))}
+                                  </div>
+                                ) : cont.length > 0 ? (
+                                  <div className="flex flex-col items-center
+                                    justify-center min-h-[80px] text-violet-400">
+                                    <div className="w-9 h-9 rounded-full bg-violet-100
+                                      border border-violet-200 flex items-center
+                                      justify-center mb-1">
+                                      <svg className="w-4 h-4" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round"
+                                          strokeWidth={2} d="M5 15l7-7 7 7"/>
+                                      </svg>
+                                    </div>
+                                    <span className="text-[11px] font-medium">Continued</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-center
+                                    min-h-[80px]">
+                                    <span className="text-slate-200 text-2xl select-none">
+                                      —
+                                    </span>
+                                  </div>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            )}
-          </Card>
+
+              {/* Footer stats */}
+              <div className="bg-slate-50 border-t border-slate-200 px-4 sm:px-6 py-4">
+                <div className="flex flex-wrap justify-between items-center gap-3">
+                  <div className="flex flex-wrap gap-3 sm:gap-5 text-xs sm:text-sm">
+                    {[
+                      { dot:'bg-slate-400',   label:'Classes', val: getUniqueCount()         },
+                      { dot:'bg-blue-400',    label:'Theory',  val: getTypeCounts().theories  },
+                      { dot:'bg-emerald-400', label:'Lab',     val: getTypeCounts().labs      },
+                      { dot:'bg-amber-400',   label:'Slots',   val: selectedSchedules.length  },
+                    ].map(({ dot, label, val }) => (
+                      <div key={label} className="flex items-center gap-1.5">
+                        <div className={`w-2 h-2 rounded-full ${dot}`} />
+                        <span className="text-slate-500">
+                          {label}:{' '}
+                          <span className="font-semibold text-slate-800">{val}</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] sm:text-xs text-slate-400">
+                    {new Date().toLocaleDateString('en-US', {
+                      weekday:'short', month:'short', day:'numeric', year:'numeric',
+                    })}
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 
-      {/* Empty State */}
+      {/* Empty state */}
       {!showRoutine && batchSections.length === 0 && (
-        <Card>
-          <div className="text-center py-16">
-            <div className="text-8xl mb-6">📅</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">
-              No Routines Available
-            </h3>
-            <p className="text-gray-500 text-lg max-w-md mx-auto">
-              No class schedules have been added yet.
-              <br />
-              Check back later or contact your CR.
-            </p>
-          </div>
-        </Card>
+        <div className="bg-white border border-gray-200 rounded-xl p-12 sm:p-16 text-center">
+          <div className="text-5xl sm:text-6xl mb-4">📅</div>
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">
+            No Routines Available
+          </h3>
+          <p className="text-gray-400 max-w-sm mx-auto text-sm">
+            No class schedules added yet. Check back later.
+          </p>
+        </div>
       )}
     </div>
   );
