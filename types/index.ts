@@ -154,12 +154,13 @@ export interface CheckAvailabilityRequest {
 export const DEPARTMENTS = [
   'CSE',
   'EEE', 
-  'Civil',
-  'BBA',
-  'English',
-  'Law',
-  'Pharmacy',
-  'Architecture'
+  'CEN',
+  'DBA',
+  'ENG',
+  'LLB',
+  'BTE',
+  'JRN',
+  'BFT'
 ] as const;
 
 export type Department = typeof DEPARTMENTS[number];
