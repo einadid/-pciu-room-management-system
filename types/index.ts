@@ -155,7 +155,7 @@ export const DEPARTMENTS = [
   'CSE',
   'EEE', 
   'Civil',
-  'BBA',
+  'DBA',
   'English',
   'Law',
   'Pharmacy',
