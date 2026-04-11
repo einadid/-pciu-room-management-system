@@ -703,132 +703,178 @@ const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' }) as
             </div>
           ) : (
             <>
-              {/* ════════════════════════════════════════
-                  MOBILE VIEW  — Day tabs + slot cards
-                  ════════════════════════════════════════ */}
-              <div className="block lg:hidden">
-                {/* Day tab bar */}
-                <div className="bg-slate-50 border-b border-slate-200">
-                  <div className="flex overflow-x-auto scrollbar-hide">
-                    {DAYS.map((day, idx) => {
-                      const isToday   = day === todayName;
-                      const isActive  = idx === activeDay;
-                      const daySlots  = TIME_SLOTS.flatMap(
-                        (sl) => scheduleGrid[day]?.[sl.id] ?? []
-                      ).filter((s) => !s.isMultiSlot || s.isFirstSlot);
-                      const hasClass  = daySlots.length > 0;
+             {/* ════════════════════════════════════════
+    MOBILE VIEW — Same table, horizontal scroll
+    ════════════════════════════════════════ */}
+<div className="block lg:hidden">
+  {/* Legend */}
+  <div className="bg-slate-50 border-b border-slate-200 px-3 py-2">
+    <div className="flex flex-wrap gap-3 justify-center">
+      {[
+        { cls: 'bg-blue-50 border-l-2 border-l-blue-500 border border-blue-200', label: 'Theory' },
+        { cls: 'bg-emerald-50 border-l-2 border-l-emerald-500 border border-emerald-200', label: 'Lab' },
+        { cls: 'bg-violet-50 border-l-2 border-l-violet-500 border border-violet-200', label: 'Multi-slot' },
+      ].map(({ cls, label }) => (
+        <div key={label} className="flex items-center gap-1.5">
+          <span className={`w-4 h-3 rounded-sm inline-block ${cls}`} />
+          <span className="text-[11px] text-slate-500 font-medium">{label}</span>
+        </div>
+      ))}
+      {DAYS.includes(todayName as (typeof DAYS)[number]) && (
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-full bg-amber-400 inline-block" />
+          <span className="text-[11px] text-slate-500 font-medium">Today</span>
+        </div>
+      )}
+    </div>
+  </div>
 
-                      return (
-                        <button key={day} onClick={() => setActiveDay(idx)}
-                          className={`flex-shrink-0 flex flex-col items-center
-                            px-4 py-3 text-xs font-semibold border-b-2
-                            transition-all duration-200 relative
-                            ${isActive
-                              ? isToday
-                                ? 'border-amber-500 text-amber-600 bg-amber-50'
-                                : 'border-blue-600 text-blue-700 bg-blue-50'
-                              : 'border-transparent text-slate-500 hover:text-slate-700'
-                            }`}>
-                          {/* Today dot */}
-                          {isToday && (
-                            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5
-                              rounded-full bg-amber-400" />
-                          )}
-                          {/* Short day name */}
-                          <span className="text-[11px] font-bold">
-                            {day.slice(0, 3).toUpperCase()}
-                          </span>
-                          {/* Class count badge */}
-                          {hasClass ? (
-                            <span className={`mt-1 text-[9px] px-1.5 py-0.5 rounded-full
-                              font-bold ${isActive
-                                ? isToday
-                                  ? 'bg-amber-500 text-white'
-                                  : 'bg-blue-600 text-white'
-                                : 'bg-slate-200 text-slate-600'}`}>
-                              {daySlots.length}
-                            </span>
-                          ) : (
-                            <span className="mt-1 text-[9px] text-slate-300 font-medium">
-                              —
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
+  {/* Scroll hint */}
+  <div className="flex items-center justify-center gap-1.5 py-1.5
+    bg-slate-100 border-b border-slate-200">
+    <svg className="w-3.5 h-3.5 text-slate-400" fill="none"
+      viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+    </svg>
+    <span className="text-[10px] text-slate-400 font-medium">
+      Scroll left / right to see all days
+    </span>
+  </div>
 
-                  {/* Active day label */}
-                  <div className="px-4 py-2 flex items-center gap-2">
-                    <span className="text-sm font-bold text-slate-800">
-                      {DAYS[activeDay]}
-                    </span>
-                    {DAYS[activeDay] === todayName && (
-                      <span className="text-[10px] bg-amber-100 text-amber-700
-                        px-2 py-0.5 rounded-full font-semibold">Today</span>
-                    )}
-                  </div>
+  {/* The exact same table as desktop */}
+  <div className="overflow-x-auto">
+    <table className="border-collapse"
+      style={{ minWidth: `${DAYS.length * 160 + 110}px`, width: '100%' }}>
+      <thead>
+        <tr>
+          {/* Time header */}
+          <th className="bg-slate-800 text-white border border-slate-700
+            px-3 py-3 text-left text-[11px] font-bold uppercase tracking-wider
+            sticky left-0 z-20"
+            style={{ minWidth: '110px', width: '110px' }}>
+            <div className="flex items-center gap-1.5">
+              <svg className="w-3 h-3 text-slate-400" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>Time</span>
+            </div>
+          </th>
+
+          {/* Day headers */}
+          {DAYS.map((day) => {
+            const isToday = day === todayName;
+            return (
+              <th key={day}
+                className={`border border-slate-700 px-2 py-3 text-center
+                  text-[11px] font-bold uppercase tracking-wider
+                  ${isToday ? 'bg-amber-500 text-white' : 'bg-slate-800 text-white'}`}
+                style={{ minWidth: '160px' }}>
+                <div className="flex items-center justify-center gap-1">
+                  {isToday && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                  )}
+                  <span>{day}</span>
                 </div>
+                {isToday && (
+                  <span className="text-[9px] bg-white/20 px-1.5 py-0.5
+                    rounded-full font-medium normal-case mt-0.5 inline-block">
+                    Today
+                  </span>
+                )}
+              </th>
+            );
+          })}
+        </tr>
+      </thead>
 
-                {/* Slots for active day */}
-                <div className="p-3 space-y-3">
-                  {TIME_SLOTS.map((slot) => {
-                    const all     = scheduleGrid[DAYS[activeDay]]?.[slot.id] ?? [];
-                    const display = all.filter((s) => !s.isMultiSlot || s.isFirstSlot);
-                    const cont    = all.filter((s) => s.isMultiSlot && !s.isFirstSlot);
-
-                    return (
-                      <div key={slot.id}
-                        className="flex gap-2 sm:gap-3">
-                        {/* Time label */}
-                        <div className="flex-shrink-0 w-16 sm:w-20">
-                          <div className="bg-slate-800 rounded-lg px-2 py-2.5
-                            text-center h-full flex flex-col
-                            justify-center items-center">
-                            <span className="text-[9px] font-bold text-blue-400
-                              uppercase tracking-wide">{slot.name}</span>
-                            <span className="text-white font-bold text-xs mt-1
-                              tabular-nums">{slot.time}</span>
-                            <span className="text-slate-400 text-[9px] tabular-nums">
-                              {slot.end}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Cards */}
-                        <div className="flex-1 min-w-0">
-                          {display.length > 0 ? (
-                            <div className="space-y-2">
-                              {display.map((s) => (
-                                <ScheduleCard key={s.id} schedule={s} />
-                              ))}
-                            </div>
-                          ) : cont.length > 0 ? (
-                            <div className="flex items-center justify-center h-full
-                              min-h-[60px] rounded-xl bg-violet-50 border
-                              border-violet-100 text-violet-400">
-                              <div className="text-center">
-                                <svg className="w-5 h-5 mx-auto" fill="none"
-                                  viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round"
-                                    strokeWidth={2} d="M5 15l7-7 7 7"/>
-                                </svg>
-                                <p className="text-[10px] font-medium mt-0.5">Continued</p>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-center
-                              min-h-[56px] rounded-xl bg-slate-50 border
-                              border-dashed border-slate-200">
-                              <span className="text-slate-300 text-xs">No class</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+      <tbody>
+        {TIME_SLOTS.map((slot, ri) => (
+          <tr key={slot.id}>
+            {/* Time cell — sticky */}
+            <td className="border border-slate-200 p-0 align-middle
+              sticky left-0 z-10 bg-slate-800"
+              style={{ minWidth: '110px', width: '110px' }}>
+              <div className="px-3 py-3">
+                <div className="inline-flex items-center gap-1
+                  bg-blue-600 text-white text-[10px] font-bold
+                  px-2 py-0.5 rounded-full mb-2 shadow-sm">
+                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round"
+                      strokeWidth={2.5}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  {slot.name}
+                </div>
+                <div className="text-white font-bold text-xs tabular-nums">
+                  {slot.time}
+                </div>
+                <div className="text-slate-400 text-[10px] tabular-nums mt-0.5">
+                  – {slot.end}
+                </div>
+                <div className="mt-1.5">
+                  <span className="text-[9px] text-slate-500 bg-slate-700
+                    px-1.5 py-0.5 rounded-full border border-slate-600">
+                    85 min
+                  </span>
                 </div>
               </div>
+            </td>
+
+            {/* Day cells */}
+            {DAYS.map((day) => {
+              const isToday = day === todayName;
+              const all     = scheduleGrid[day]?.[slot.id] ?? [];
+              const display = all.filter((s) => !s.isMultiSlot || s.isFirstSlot);
+              const cont    = all.filter((s) => s.isMultiSlot && !s.isFirstSlot);
+              const rowBg   = ri % 2 === 0 ? 'bg-white' : 'bg-slate-50/50';
+
+              return (
+                <td key={day}
+                  className={`border px-1.5 py-1.5 align-top
+                    ${isToday
+                      ? 'border-amber-200 bg-amber-50/30'
+                      : `border-slate-200 ${rowBg}`}`}
+                  style={{ minWidth: '160px' }}>
+
+                  {display.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {display.map((s) => (
+                        <ScheduleCard key={s.id} schedule={s} />
+                      ))}
+                    </div>
+
+                  ) : cont.length > 0 ? (
+                    <div className="flex flex-col items-center justify-center
+                      min-h-[70px] text-violet-400">
+                      <div className="w-7 h-7 rounded-full bg-violet-100
+                        border border-violet-200 flex items-center justify-center mb-1">
+                        <svg className="w-3.5 h-3.5" fill="none"
+                          viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round"
+                            strokeWidth={2} d="M5 15l7-7 7 7"/>
+                        </svg>
+                      </div>
+                      <span className="text-[10px] font-medium">Continued</span>
+                    </div>
+
+                  ) : (
+                    <div className="flex items-center justify-center min-h-[70px]">
+                      <span className="text-slate-200 text-xl select-none">—</span>
+                    </div>
+                  )}
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</div>
 
               {/* ════════════════════════════════════════
                   DESKTOP VIEW — full scrollable table
