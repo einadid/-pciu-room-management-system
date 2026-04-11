@@ -158,8 +158,9 @@ export const DEPARTMENTS = [
   'DBA',
   'English',
   'Law',
-  'Pharmacy',
-  'Architecture'
+  'Journalism',
+  'Textile',
+  'Fashion Design'
 ] as const;
 
 export type Department = typeof DEPARTMENTS[number];
