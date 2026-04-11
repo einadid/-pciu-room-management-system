@@ -24,7 +24,7 @@ export default function AddSchedulePage() {
     time_slot_id: '',
     class_type: 'Theory',
     sub_section: '',
-    duration_slots: 1, // NEW: 1 = 1.5 hours, 2 = 3 hours (for labs)
+    duration_slots: 1,
   });
 
   const [loading, setLoading] = useState(false);
@@ -64,7 +64,7 @@ export default function AddSchedulePage() {
     try {
       const [slotsRes, roomsRes] = await Promise.all([
         fetch('/api/time-slots'),
-        fetch('/api/rooms'),
+        fetch('/api/rooms?active_only=true'),
       ]);
 
       const slotsData = await slotsRes.json();
@@ -97,7 +97,9 @@ export default function AddSchedulePage() {
     const maxSlots = timeSlots.length || 6;
 
     if (endSlotId > maxSlots) {
-      setError(`Cannot book ${formData.duration_slots} slots starting from this time. Not enough slots remaining in the day.`);
+      setError(
+        `Cannot book ${formData.duration_slots} slots starting from this time. Not enough slots remaining in the day.`
+      );
       setLoading(false);
       return;
     }
@@ -109,7 +111,7 @@ export default function AddSchedulePage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           room_id: Number(formData.room_id),
@@ -119,11 +121,13 @@ export default function AddSchedulePage() {
           day_of_week: formData.day_of_week,
           time_slot_id: Number(formData.time_slot_id),
           class_type: formData.class_type,
-          duration_slots: formData.class_type === 'Lab' ? formData.duration_slots : 1, // Only labs can have multiple slots
+          duration_slots:
+            formData.class_type === 'Lab' ? formData.duration_slots : 1,
           department: user?.department,
           batch_name: user?.batch_name,
           section_name: user?.section_name,
-          sub_section: formData.class_type === 'Theory' ? null : formData.sub_section,
+          sub_section:
+            formData.class_type === 'Theory' ? null : formData.sub_section,
         }),
       });
 
@@ -131,7 +135,6 @@ export default function AddSchedulePage() {
 
       if (data.success) {
         setSuccess(true);
-        // Reset form
         setFormData({
           room_id: '',
           course_name: '',
@@ -163,32 +166,25 @@ export default function AddSchedulePage() {
     setFormData({
       ...formData,
       class_type: type,
-      sub_section: '', // Reset sub_section when type changes
-      duration_slots: type === 'Lab' ? 2 : 1, // Default 2 slots for lab, 1 for theory
-      room_id: '', // Reset room selection
+      sub_section: '',
+      duration_slots: type === 'Lab' ? 2 : 1,
+      room_id: '',
     });
   };
 
-  // Filter rooms based on class type
-  const filteredRooms = rooms.filter((room) => {
-    if (formData.class_type === 'Lab') {
-      return room.room_types?.type_name === 'Lab';
-    }
-    // For theory, show all rooms except labs (or show all)
-    return room.room_types?.type_name !== 'Lab';
-  });
+  // All rooms shown regardless of class type
+  const filteredRooms = rooms;
 
-  // Get available time slots (filter out slots that would exceed day limit for multi-slot booking)
+  // Get available time slots
   const getAvailableTimeSlots = () => {
     const maxSlots = timeSlots.length || 6;
     return timeSlots.filter((slot) => {
-      const slotNumber = slot.id; // Assuming id corresponds to slot number
-      const endSlot = slotNumber + formData.duration_slots - 1;
+      const endSlot = slot.id + formData.duration_slots - 1;
       return endSlot <= maxSlots;
     });
   };
 
-  // Calculate end time for display
+  // Calculate end time display for multi-slot bookings
   const getEndTimeDisplay = () => {
     if (!formData.time_slot_id || formData.duration_slots <= 1) return null;
 
@@ -222,11 +218,15 @@ export default function AddSchedulePage() {
       <Card title="➕ Add New Class Schedule">
         {/* User Info Banner */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <h4 className="font-medium text-blue-900 mb-2">Adding schedule for:</h4>
+          <h4 className="font-medium text-blue-900 mb-2">
+            Adding schedule for:
+          </h4>
           <div className="flex flex-wrap gap-2">
             <Badge variant="default">{user?.department}</Badge>
             <Badge variant="lab">{user?.batch_name || 'No Batch'}</Badge>
-            <Badge variant="classroom">Section {user?.section_name || 'N/A'}</Badge>
+            <Badge variant="classroom">
+              Section {user?.section_name || 'N/A'}
+            </Badge>
           </div>
         </div>
 
@@ -289,10 +289,12 @@ export default function AddSchedulePage() {
             </div>
           </div>
 
-          {/* Lab Duration Selection (Only for Lab) */}
+          {/* Lab Duration Selection */}
           {formData.class_type === 'Lab' && (
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-              <h4 className="font-medium text-orange-900 mb-3">⏱️ Lab Duration</h4>
+              <h4 className="font-medium text-orange-900 mb-3">
+                ⏱️ Lab Duration
+              </h4>
               <p className="text-sm text-orange-700 mb-3">
                 Select how long this lab session is:
               </p>
@@ -309,7 +311,9 @@ export default function AddSchedulePage() {
                     name="duration"
                     value="1"
                     checked={formData.duration_slots === 1}
-                    onChange={() => setFormData({ ...formData, duration_slots: 1 })}
+                    onChange={() =>
+                      setFormData({ ...formData, duration_slots: 1 })
+                    }
                     className="sr-only"
                   />
                   <span className="text-2xl mb-1">🕐</span>
@@ -329,7 +333,9 @@ export default function AddSchedulePage() {
                     name="duration"
                     value="2"
                     checked={formData.duration_slots === 2}
-                    onChange={() => setFormData({ ...formData, duration_slots: 2 })}
+                    onChange={() =>
+                      setFormData({ ...formData, duration_slots: 2 })
+                    }
                     className="sr-only"
                   />
                   <span className="text-2xl mb-1">🕒</span>
@@ -340,10 +346,12 @@ export default function AddSchedulePage() {
             </div>
           )}
 
-          {/* Lab Group Selection (Only for Lab) */}
+          {/* Lab Group Selection */}
           {formData.class_type === 'Lab' && (
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-              <h4 className="font-medium text-purple-900 mb-3">👥 Lab Group</h4>
+              <h4 className="font-medium text-purple-900 mb-3">
+                👥 Lab Group
+              </h4>
               <p className="text-sm text-purple-700 mb-3">
                 Select which group this lab is for (e.g., A1, A2 for Section A)
               </p>
@@ -361,7 +369,9 @@ export default function AddSchedulePage() {
                       type="radio"
                       name="sub_section"
                       value={`${user?.section_name}${num}`}
-                      checked={formData.sub_section === `${user?.section_name}${num}`}
+                      checked={
+                        formData.sub_section === `${user?.section_name}${num}`
+                      }
                       onChange={(e) =>
                         setFormData({
                           ...formData,
@@ -417,7 +427,10 @@ export default function AddSchedulePage() {
               label="Day *"
               value={formData.day_of_week}
               onChange={(e) =>
-                setFormData({ ...formData, day_of_week: e.target.value as DayOfWeek })
+                setFormData({
+                  ...formData,
+                  day_of_week: e.target.value as DayOfWeek,
+                })
               }
               options={DAYS.map((day) => ({ value: day, label: day }))}
               required
@@ -436,7 +449,6 @@ export default function AddSchedulePage() {
                 }))}
                 required
               />
-              {/* Show end time for multi-slot bookings */}
               {getEndTimeDisplay() && (
                 <p className="text-sm text-orange-600 mt-1">
                   📌 {getEndTimeDisplay()}
@@ -445,54 +457,74 @@ export default function AddSchedulePage() {
             </div>
           </div>
 
-          {/* Room Selection */}
-          <Select
-            label={`Room * ${formData.class_type === 'Lab' ? '(Showing Labs only)' : '(Showing Classrooms)'}`}
-            value={formData.room_id}
-            onChange={(e) => setFormData({ ...formData, room_id: e.target.value })}
-            options={filteredRooms.map((room) => ({
-              value: room.id,
-              label: `${room.room_name} - ${room.building} (${room.room_types?.type_name || 'Room'})`,
-            }))}
-            required
-          />
+          {/* Room Selection - All Rooms */}
+          <div>
+            <Select
+              label="Room * (All Rooms)"
+              value={formData.room_id}
+              onChange={(e) =>
+                setFormData({ ...formData, room_id: e.target.value })
+              }
+              options={filteredRooms.map((room) => ({
+                value: room.id,
+                label: `${room.room_name} - ${room.building} (${
+                  room.room_types?.type_name || 'No Type'
+                })`,
+              }))}
+              required
+            />
 
-          {/* No rooms available message */}
-          {filteredRooms.length === 0 && (
-            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 text-sm">
-              ⚠️ No {formData.class_type === 'Lab' ? 'lab rooms' : 'classrooms'} available. Please contact admin.
-            </div>
-          )}
+            {/* No rooms available warning */}
+            {rooms.length === 0 && (
+              <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                ❌ No rooms found in the system. Please contact admin to add
+                rooms.
+              </div>
+            )}
+          </div>
 
           {/* Summary before submit */}
-          {formData.course_name && formData.day_of_week && formData.time_slot_id && formData.room_id && (
-            <div className="bg-gray-100 border border-gray-300 rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-2">📋 Summary</h4>
-              <div className="text-sm space-y-1">
-                <p>
-                  <strong>Course:</strong> {formData.course_name} {formData.course_code && `(${formData.course_code})`}
-                </p>
-                <p>
-                  <strong>Type:</strong> {formData.class_type}
-                  {formData.class_type === 'Lab' && formData.sub_section && ` - Group ${formData.sub_section}`}
-                </p>
-                <p>
-                  <strong>Day:</strong> {formData.day_of_week}
-                </p>
-                <p>
-                  <strong>Duration:</strong> {formData.duration_slots * 1.5} hours ({formData.duration_slots} slot{formData.duration_slots > 1 ? 's' : ''})
-                </p>
-                <p>
-                  <strong>Room:</strong> {filteredRooms.find(r => r.id.toString() === formData.room_id)?.room_name}
-                </p>
-                {formData.teacher_name && (
+          {formData.course_name &&
+            formData.day_of_week &&
+            formData.time_slot_id &&
+            formData.room_id && (
+              <div className="bg-gray-100 border border-gray-300 rounded-lg p-4">
+                <h4 className="font-medium text-gray-900 mb-2">📋 Summary</h4>
+                <div className="text-sm space-y-1">
                   <p>
-                    <strong>Teacher:</strong> {formData.teacher_name}
+                    <strong>Course:</strong> {formData.course_name}{' '}
+                    {formData.course_code && `(${formData.course_code})`}
                   </p>
-                )}
+                  <p>
+                    <strong>Type:</strong> {formData.class_type}
+                    {formData.class_type === 'Lab' &&
+                      formData.sub_section &&
+                      ` - Group ${formData.sub_section}`}
+                  </p>
+                  <p>
+                    <strong>Day:</strong> {formData.day_of_week}
+                  </p>
+                  <p>
+                    <strong>Duration:</strong> {formData.duration_slots * 1.5}{' '}
+                    hours ({formData.duration_slots} slot
+                    {formData.duration_slots > 1 ? 's' : ''})
+                  </p>
+                  <p>
+                    <strong>Room:</strong>{' '}
+                    {
+                      rooms.find(
+                        (r) => r.id.toString() === formData.room_id
+                      )?.room_name
+                    }
+                  </p>
+                  {formData.teacher_name && (
+                    <p>
+                      <strong>Teacher:</strong> {formData.teacher_name}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Submit Buttons */}
           <div className="flex gap-4">
