@@ -769,21 +769,23 @@ export default function PublicRoutinePage() {
       iframe.style.height = `${totalH}px`;
       await new Promise((r) => setTimeout(r, 400));
 
-      // capture
-      const canvas = await html2canvas(iDoc.body, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-        width: PAGE_W,
-        height: totalH,
-        windowWidth: PAGE_W,
-        windowHeight: totalH,
-        scrollX: 0,
-        scrollY: 0,
-        allowTaint: true,
-        foreignObjectRendering: false,
-      });
+// capture
+const options = {
+  scale:                  2,
+  useCORS:                true,
+  logging:                false,
+  backgroundColor:        '#ffffff',
+  width:                  PAGE_W,
+  height:                 totalH,
+  windowWidth:            PAGE_W,
+  windowHeight:           totalH,
+  scrollX:                0,
+  scrollY:                0,
+  allowTaint:             true,
+  foreignObjectRendering: false,
+};
+
+const canvas = await html2canvas(iDoc.body, options as any);
 
       document.body.removeChild(iframe);
 
