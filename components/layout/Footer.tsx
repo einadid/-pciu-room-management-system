@@ -14,10 +14,13 @@ export default function Footer() {
   const departments = [
     "Computer Science & Engineering",
     "Electrical & Electronic Engineering",
-    "Business Administration",
     "Civil Engineering",
-    "English",
+    "Textile Engineering",
+    "Fashion Design & Technology",
+    "Business Administration",
     "Law",
+    "English",
+    "Broadcast & Print Journalism",
   ];
 
   return (

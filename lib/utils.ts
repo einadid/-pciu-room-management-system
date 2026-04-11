@@ -15,45 +15,48 @@ export function formatTime(time: string): string {
   return `${displayHour}:${minutes} ${ampm}`;
 }
 
-// 🔹 Get current day name
-export function getCurrentDay(): string {
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  return days[new Date().getDay()];
+// 🔹 Get Bangladesh local time (UTC+6)
+function getBDTime(): Date {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
 }
 
-// 🔹 Get current time slot ID based on current time
+// 🔹 Get current day name (Bangladesh time)
+export function getCurrentDay(): string {
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return days[getBDTime().getDay()];
+}
+
+// 🔹 Get current time slot ID based on current time (Bangladesh time)
 export function getCurrentTimeSlotId(): number | null {
-  const now = new Date();
+  const now = getBDTime();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  
+
   const slots = [
     { id: 1, start: 8 * 60 + 30, end: 9 * 60 + 55 },   // 08:30-09:55
-    { id: 2, start: 10 * 60, end: 11 * 60 + 25 },      // 10:00-11:25
-    { id: 3, start: 11 * 60 + 30, end: 12 * 60 + 55 }, // 11:30-12:55
-    { id: 4, start: 13 * 60 + 30, end: 14 * 60 + 55 }, // 13:30-14:55
-    { id: 5, start: 15 * 60, end: 16 * 60 + 25 },      // 15:00-16:25
-    { id: 6, start: 16 * 60 + 30, end: 17 * 60 + 55 }, // 16:30-17:55
+    { id: 2, start: 10 * 60, end: 11 * 60 + 25 },       // 10:00-11:25
+    { id: 3, start: 11 * 60 + 30, end: 12 * 60 + 55 },  // 11:30-12:55
+    { id: 4, start: 13 * 60 + 30, end: 14 * 60 + 55 },  // 13:30-14:55
+    { id: 5, start: 15 * 60, end: 16 * 60 + 25 },       // 15:00-16:25
+    { id: 6, start: 16 * 60 + 30, end: 17 * 60 + 55 },  // 16:30-17:55
   ];
-  
+
   for (const slot of slots) {
     if (currentMinutes >= slot.start && currentMinutes <= slot.end) {
       return slot.id;
     }
   }
-  
+
   return null; // Outside class hours
 }
 
-// 🔹 Check if current time is within university hours
+// 🔹 Check if current time is within university hours (Bangladesh time)
 export function isUniversityHours(): boolean {
-  const now = new Date();
+  const now = getBDTime();
   const hour = now.getHours();
-  
-  // Sunday=0 to Thursday=4 are class days
-  
+
   // Class hours: 8:30 AM to 6:00 PM
   if (hour < 8 || hour >= 18) return false;
-  
+
   return true;
 }
 
