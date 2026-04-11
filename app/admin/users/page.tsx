@@ -12,6 +12,12 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterDepartment, setFilterDepartment] = useState('');
+  const [filterBatch, setFilterBatch] = useState('');
+  const [filterSection, setFilterSection] = useState('');
+
   useEffect(() => {
     const userData = localStorage.getItem("user");
     const token = localStorage.getItem("access_token");
@@ -74,6 +80,50 @@ export default function AdminUsersPage() {
     }
   };
 
+  // Separate admin and cr users
+  const adminUsers = users.filter((u) => u.role === "admin");
+  const crUsers = users.filter((u) => u.role === "cr");
+
+  // Get unique values for filter dropdowns
+  const uniqueDepartments = [...new Set(crUsers.map((u: any) => u.department).filter(Boolean))];
+  const uniqueBatches = [...new Set(crUsers.map((u: any) => u.batch_name).filter(Boolean))];
+  const uniqueSections = [...new Set(crUsers.map((u: any) => u.section_name).filter(Boolean))];
+
+  // Apply filters to CR users
+  const filteredCrUsers = crUsers.filter((user: any) => {
+    // Search query - name, email, token_id
+    const matchesSearch =
+      searchQuery === '' ||
+      user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.token_id?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    // Department filter
+    const matchesDepartment =
+      filterDepartment === '' || user.department === filterDepartment;
+
+    // Batch filter
+    const matchesBatch =
+      filterBatch === '' || user.batch_name === filterBatch;
+
+    // Section filter
+    const matchesSection =
+      filterSection === '' || user.section_name === filterSection;
+
+    return matchesSearch && matchesDepartment && matchesBatch && matchesSection;
+  });
+
+  // Reset all filters
+  const resetFilters = () => {
+    setSearchQuery('');
+    setFilterDepartment('');
+    setFilterBatch('');
+    setFilterSection('');
+  };
+
+  const hasActiveFilters =
+    searchQuery || filterDepartment || filterBatch || filterSection;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -81,9 +131,6 @@ export default function AdminUsersPage() {
       </div>
     );
   }
-
-  const adminUsers = users.filter((u) => u.role === "admin");
-  const crUsers = users.filter((u) => u.role === "cr");
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -193,8 +240,119 @@ export default function AdminUsersPage() {
         </Card>
       )}
 
-      {/* CR Users Table */}
+      {/* CR Users - Filter Bar */}
       <Card title="👥 Class Representatives">
+
+        {/* Filter Section */}
+        <div className="mb-6 space-y-3">
+          {/* Search */}
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+              🔍
+            </span>
+            <input
+              type="text"
+              placeholder="Search by name, email or token..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Dropdown Filters */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Department Filter */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Department
+              </label>
+              <select
+                value={filterDepartment}
+                onChange={(e) => setFilterDepartment(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Departments</option>
+                {uniqueDepartments.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Batch Filter */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Batch
+              </label>
+              <select
+                value={filterBatch}
+                onChange={(e) => setFilterBatch(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Batches</option>
+                {uniqueBatches.map((batch) => (
+                  <option key={batch} value={batch}>
+                    {batch}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Section Filter */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Section
+              </label>
+              <select
+                value={filterSection}
+                onChange={(e) => setFilterSection(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Sections</option>
+                {uniqueSections.map((section) => (
+                  <option key={section} value={section}>
+                    Section {section}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Filter Results Info + Reset */}
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-500">
+              Showing{' '}
+              <span className="font-semibold text-gray-800">
+                {filteredCrUsers.length}
+              </span>{' '}
+              of{' '}
+              <span className="font-semibold text-gray-800">
+                {crUsers.length}
+              </span>{' '}
+              CR users
+            </p>
+
+            {hasActiveFilters && (
+              <button
+                onClick={resetFilters}
+                className="text-sm text-red-500 hover:text-red-700 font-medium flex items-center gap-1"
+              >
+                ✕ Reset Filters
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* CR Table */}
         {crUsers.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">👥</div>
@@ -207,6 +365,23 @@ export default function AdminUsersPage() {
             <Button onClick={() => router.push("/admin/generate-token")}>
               Generate Token
             </Button>
+          </div>
+        ) : filteredCrUsers.length === 0 ? (
+          // No results after filter
+          <div className="text-center py-12">
+            <div className="text-5xl mb-4">🔍</div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No Results Found
+            </h3>
+            <p className="text-gray-500 mb-4">
+              No CR users match your current filters
+            </p>
+            <button
+              onClick={resetFilters}
+              className="text-blue-600 hover:text-blue-800 font-medium"
+            >
+              Clear Filters
+            </button>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -240,7 +415,7 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {crUsers.map((user: any) => (
+                {filteredCrUsers.map((user: any) => (
                   <tr key={user.id} className="hover:bg-gray-50">
                     {/* Name */}
                     <td className="px-6 py-4 whitespace-nowrap">
