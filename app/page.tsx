@@ -494,8 +494,8 @@ export default async function HomePage() {
             Need Help or Have Suggestions?
           </h2>
           <p className="text-slate-400 mb-8 text-sm sm:text-base max-w-lg mx-auto">
-            Contact us for any queries or to report issues with the system.
-            We're here to help.
+            Contact me for any queries or to report issues with the system.
+            I am here to help.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/contact">

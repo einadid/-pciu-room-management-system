@@ -41,7 +41,6 @@ export default function TermsPage() {
               <ul className="list-disc pl-6 space-y-1">
                 <li><strong>Admin:</strong> Full system access, token generation</li>
                 <li><strong>CR (Class Representative):</strong> Manage assigned section schedules</li>
-                <li><strong>Super Admin:</strong> Complete system management</li>
               </ul>
             </div>
           </section>
@@ -104,7 +103,7 @@ export default function TermsPage() {
               8. Contact
             </h2>
             <p className="text-gray-700 leading-relaxed">
-              For questions about these terms, please contact us at{' '}
+              For questions about these terms, please contact me at{' '}
               <a href="mailto:emamulislamnadid_cse30d@portcity.edu.bd" className="text-blue-600 hover:text-blue-700">
                 emamulislamnadid_cse30d@portcity.edu.bd
               </a>

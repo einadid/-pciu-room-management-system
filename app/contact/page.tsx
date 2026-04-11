@@ -65,8 +65,7 @@ export default function ContactPage() {
                 Thank You!
               </h3>
               <p className="text-gray-600 mb-6">
-                Your message has been submitted successfully. We'll get back to
-                you soon.
+                Your message has been submitted successfully. I will get back to you soon.
               </p>
               <Button onClick={() => setSuccess(false)}>
                 Send Another Message
