@@ -14,7 +14,10 @@ export default function CheckRoomPage() {
   const [selectedSlot, setSelectedSlot] = useState<number>(0);
   const [roomType, setRoomType] = useState<string>('');
   const [building, setBuilding] = useState<string>('');
-  
+  const [selectedDate, setSelectedDate] = useState<string>(
+    new Date().toISOString().split('T')[0]
+  );
+
   const [availability, setAvailability] = useState<RoomAvailability[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
@@ -22,7 +25,7 @@ export default function CheckRoomPage() {
   // Auto-set current day and time on mount
   useEffect(() => {
     fetchTimeSlots();
-    
+
     const currentDay = getCurrentDay();
     if (DAYS.includes(currentDay as DayOfWeek)) {
       setSelectedDay(currentDay as DayOfWeek);
@@ -70,6 +73,7 @@ export default function CheckRoomPage() {
           time_slot_id: selectedSlot,
           room_type: roomType || undefined,
           building: building || undefined,
+          check_date: selectedDate, // ✅ Pass selected date for exception checking
         }),
       });
 
@@ -91,7 +95,18 @@ export default function CheckRoomPage() {
   const occupiedRooms = availability.filter((r) => r.status === 'occupied');
 
   // Get current time slot name
-  const currentSlotName = timeSlots.find(s => s.id === selectedSlot)?.slot_name || '';
+  const currentSlotName =
+    timeSlots.find((s) => s.id === selectedSlot)?.slot_name || '';
+
+  // Format selected date for display
+  const formattedSelectedDate = selectedDate
+    ? new Date(selectedDate).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : '';
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -117,7 +132,7 @@ export default function CheckRoomPage() {
               <p className="text-lg font-bold text-gray-900">{getCurrentDay()}</p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-cyan-600 rounded-full flex items-center justify-center">
               <span className="text-white text-xl">⏰</span>
@@ -125,9 +140,9 @@ export default function CheckRoomPage() {
             <div>
               <p className="text-sm text-gray-600">Current Time</p>
               <p className="text-lg font-bold text-gray-900">
-                {new Date().toLocaleTimeString('en-US', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
+                {new Date().toLocaleTimeString('en-US', {
+                  hour: '2-digit',
+                  minute: '2-digit',
                 })}
               </p>
             </div>
@@ -135,6 +150,9 @@ export default function CheckRoomPage() {
 
           <Button
             onClick={() => {
+              const today = new Date().toISOString().split('T')[0];
+              setSelectedDate(today);
+
               const currentDay = getCurrentDay();
               if (DAYS.includes(currentDay as DayOfWeek)) {
                 setSelectedDay(currentDay as DayOfWeek);
@@ -154,7 +172,45 @@ export default function CheckRoomPage() {
 
       {/* Filter Form */}
       <Card className="mb-8">
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-4">
+          {/* Date Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Date
+            </label>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => {
+                const newDate = e.target.value;
+                setSelectedDate(newDate);
+
+                // Auto-calculate day from selected date
+                if (newDate) {
+                  const dayName = new Date(newDate).toLocaleDateString(
+                    'en-US',
+                    { weekday: 'long' },
+                  );
+                  if (DAYS.includes(dayName as DayOfWeek)) {
+                    setSelectedDay(dayName as DayOfWeek);
+                  }
+                }
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg
+                text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                outline-none transition-shadow"
+            />
+            {selectedDate && (
+              <p className="text-xs text-gray-400 mt-1 truncate">
+                {new Date(selectedDate).toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </p>
+            )}
+          </div>
+
           {/* Day Selection */}
           <Select
             label="Day"
@@ -223,6 +279,23 @@ export default function CheckRoomPage() {
       {/* Results Summary */}
       {availability.length > 0 && (
         <>
+          {/* Date info banner */}
+          {selectedDate && (
+            <div className="flex items-center gap-2 mb-4 px-1">
+              <span className="text-sm text-gray-500">
+                Showing results for:
+              </span>
+              <span className="text-sm font-semibold text-blue-700 bg-blue-50
+                border border-blue-200 px-3 py-0.5 rounded-full">
+                {formattedSelectedDate}
+              </span>
+              <span className="text-sm text-gray-400">•</span>
+              <span className="text-sm font-medium text-gray-600">
+                {currentSlotName}
+              </span>
+            </div>
+          )}
+
           <div className="grid md:grid-cols-2 gap-4 mb-8">
             <Card>
               <div className="flex items-center justify-between">
@@ -279,7 +352,13 @@ export default function CheckRoomPage() {
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                 <span className="text-gray-700">
-                  <strong>{Math.round((freeRooms.length / availability.length) * 100)}%</strong> availability
+                  <strong>
+                    {Math.round(
+                      (freeRooms.length / availability.length) * 100,
+                    )}
+                    %
+                  </strong>{' '}
+                  availability
                 </span>
               </div>
             </div>
@@ -289,21 +368,24 @@ export default function CheckRoomPage() {
 
       {/* Free Rooms */}
       {freeRooms.length > 0 && (
-        <Card title="✅ Available Rooms" subtitle="Ready to use right now" className="mb-8">
+        <Card
+          title="✅ Available Rooms"
+          subtitle="Ready to use right now"
+          className="mb-8"
+        >
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {freeRooms.map((room) => (
               <div
                 key={room.room.id}
-                className="border-2 border-green-200 bg-green-50 rounded-xl p-4 hover:border-green-400 hover:shadow-md transition-all"
+                className="border-2 border-green-200 bg-green-50 rounded-xl p-4
+                  hover:border-green-400 hover:shadow-md transition-all"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <h3 className="text-xl font-bold text-gray-900">
                       {room.room.room_name}
                     </h3>
-                    <p className="text-sm text-gray-600">
-                      {room.room.building}
-                    </p>
+                    <p className="text-sm text-gray-600">{room.room.building}</p>
                   </div>
                   <Badge variant="free">Free</Badge>
                 </div>
@@ -313,10 +395,23 @@ export default function CheckRoomPage() {
                     <span className="text-gray-400">👥</span>
                     <span>Capacity: {room.room.capacity}</span>
                   </div>
-                  
+
+                  {/* Cancelled class notice */}
+                  {room.cancelled_class && (
+                    <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200
+                      rounded-lg text-xs flex items-start gap-1.5">
+                      <span className="flex-shrink-0 mt-px">⚠️</span>
+                      <span className="text-yellow-800 font-medium">
+                        Regular class was cancelled for this date
+                      </span>
+                    </div>
+                  )}
+
                   {room.owned_by && room.owned_by.length > 0 && (
                     <div className="pt-2 border-t border-green-200">
-                      <p className="text-xs text-gray-500 mb-1">Usually used by:</p>
+                      <p className="text-xs text-gray-500 mb-1">
+                        Usually used by:
+                      </p>
                       <div className="flex flex-wrap gap-1">
                         {room.owned_by.map((dept) => (
                           <Badge key={dept} variant="default" className="text-xs">
@@ -353,9 +448,7 @@ export default function CheckRoomPage() {
                     <h3 className="text-xl font-bold text-gray-900">
                       {room.room.room_name}
                     </h3>
-                    <p className="text-sm text-gray-600">
-                      {room.room.building}
-                    </p>
+                    <p className="text-sm text-gray-600">{room.room.building}</p>
                   </div>
                   <Badge variant="occupied">Busy</Badge>
                 </div>
@@ -375,6 +468,17 @@ export default function CheckRoomPage() {
                       <span>📚</span>
                       <span>{room.current_class.department}</span>
                     </p>
+
+                    {/* Notice for this class */}
+                    {room.current_class.notice && (
+                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200
+                        rounded-lg text-xs flex items-start gap-1.5">
+                        <span className="flex-shrink-0 mt-px">📢</span>
+                        <span className="text-blue-800">
+                          {room.current_class.notice}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -392,11 +496,14 @@ export default function CheckRoomPage() {
               Ready to Find Rooms?
             </h3>
             <p className="text-gray-500 text-lg mb-6">
-              Select a day and time slot above to check room availability
+              Select a date and time slot above to check room availability
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button
                 onClick={() => {
+                  const today = new Date().toISOString().split('T')[0];
+                  setSelectedDate(today);
+
                   const currentDay = getCurrentDay();
                   if (DAYS.includes(currentDay as DayOfWeek)) {
                     setSelectedDay(currentDay as DayOfWeek);
@@ -409,7 +516,10 @@ export default function CheckRoomPage() {
               >
                 Set Current Time
               </Button>
-              <Button variant="secondary" onClick={() => window.location.href = '/rooms'}>
+              <Button
+                variant="secondary"
+                onClick={() => (window.location.href = '/rooms')}
+              >
                 Browse All Rooms
               </Button>
             </div>

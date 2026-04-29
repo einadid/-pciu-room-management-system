@@ -103,9 +103,15 @@ export interface RoomAvailability {
     course_name: string;
     teacher_name: string | null;
     department: string;
+    notice?: string;
   };
-  owned_by?: string[];  // Departments that use this room
-  is_exclusive?: boolean;  // Only one dept uses this room
+  cancelled_class?: {
+    course_name: string;
+    department: string;
+    reason?: string;
+  };
+  owned_by?: string[];
+  is_exclusive?: boolean;
 }
 
 // 🔹 API Response Types
@@ -270,4 +276,45 @@ export function getSubSectionColor(subSection?: string | null): string {
     default:
       return 'bg-blue-100 text-blue-800';
   }
+}
+
+
+// 🔹 Schedule Exception (Class Cancel / Notice)
+export type ExceptionType = 'cancelled' | 'notice';
+
+export interface ScheduleException {
+  id: number;
+  schedule_id: number;
+  exception_date: string; // YYYY-MM-DD format
+  exception_type: ExceptionType;
+  reason: string | null;
+  notice_text: string | null;
+  created_by: string;
+  created_at: string;
+}
+
+export interface ScheduleExceptionWithDetails extends ScheduleException {
+  schedules?: {
+    id: number;
+    course_name: string;
+    course_code: string | null;
+    teacher_name: string | null;
+    department: string;
+    day_of_week: string;
+    time_slot_id: number;
+    room_id: number;
+    batch_name: string | null;
+    section_name: string | null;
+  };
+}
+
+// Helper: Get date string YYYY-MM-DD from Date object
+export function getDateString(date: Date): string {
+  return date.toISOString().split('T')[0];
+}
+
+// Helper: Get day name from date
+export function getDayFromDate(date: Date): string {
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return days[date.getDay()];
 }

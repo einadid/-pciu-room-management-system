@@ -41,6 +41,12 @@ interface ProcessedSchedule extends Schedule {
   sessionSlots: number[];
 }
 
+interface ScheduleException {
+  type: "cancelled" | "notice";
+  text?: string;
+  reason?: string;
+}
+
 // ─── helpers ──────────────────────────────────────────────────────────────────
 const getSubSectionStyle = (sub: string | null) => {
   if (!sub) return "bg-slate-100 text-slate-600";
@@ -84,7 +90,8 @@ const getDeptColor = (dept: string) => {
     "from-cyan-500 to-sky-600",
   ];
   let h = 0;
-  for (let i = 0; i < dept.length; i++) h = dept.charCodeAt(i) + ((h << 5) - h);
+  for (let i = 0; i < dept.length; i++)
+    h = dept.charCodeAt(i) + ((h << 5) - h);
   return colors[Math.abs(h) % colors.length];
 };
 
@@ -376,9 +383,11 @@ export default function PublicRoutinePage() {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [showRoutine, setShowRoutine] = useState(false);
-  // mobile: which day tab is active
   const [activeDay, setActiveDay] = useState(0);
-  // desktop vs mobile view toggle handled by CSS
+  const [routineExceptions, setRoutineExceptions] = useState<any[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>(
+    new Date().toISOString().split("T")[0],
+  );
   const routineRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -396,7 +405,6 @@ export default function PublicRoutinePage() {
         ),
       );
       setShowRoutine(true);
-      // default to today if available
       const todayIdx = DAYS.indexOf(
         new Date().toLocaleDateString("en-US", {
           weekday: "long",
@@ -408,6 +416,12 @@ export default function PublicRoutinePage() {
       setShowRoutine(false);
     }
   }, [filters, allSchedules]);
+
+  useEffect(() => {
+    if (showRoutine && selectedSchedules.length > 0) {
+      fetchRoutineExceptions();
+    }
+  }, [showRoutine, selectedDate, selectedSchedules]);
 
   const fetchAll = async () => {
     try {
@@ -436,6 +450,37 @@ export default function PublicRoutinePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchRoutineExceptions = async () => {
+    try {
+      const dept = filters.dept;
+      const batch = filters.batch;
+      const section = filters.section;
+      let url = `/api/schedule-exceptions?date=${selectedDate}&department=${encodeURIComponent(dept)}`;
+      if (batch) url += `&batch_name=${encodeURIComponent(batch)}`;
+      if (section) url += `&section_name=${encodeURIComponent(section)}`;
+
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.success) {
+        setRoutineExceptions(data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch routine exceptions:", err);
+    }
+  };
+
+  const getExceptionForSchedule = (
+    scheduleId: number,
+  ): ScheduleException | null => {
+    const ex = routineExceptions.find((e: any) => e.schedule_id === scheduleId);
+    if (!ex) return null;
+    return {
+      type: ex.exception_type as "cancelled" | "notice",
+      text: ex.notice_text,
+      reason: ex.reason,
+    };
   };
 
   const departments = [...new Set(batchSections.map((b) => b.department))];
@@ -484,15 +529,13 @@ export default function PublicRoutinePage() {
           isFirstSlot = schedule.time_slot_id === sessionSlots[0];
         }
       }
-      out
-        .get(key)!
-        .push({
-          ...schedule,
-          isMultiSlot,
-          slotSpan,
-          isFirstSlot,
-          sessionSlots,
-        });
+      out.get(key)!.push({
+        ...schedule,
+        isMultiSlot,
+        slotSpan,
+        isFirstSlot,
+        sessionSlots,
+      });
     });
     return out;
   };
@@ -542,74 +585,128 @@ export default function PublicRoutinePage() {
     return { labs, theories };
   };
 
-const handleDownload = async () => {
-  if (!routineRef.current) return;
-  setDownloading(true);
+  const handleDownload = async () => {
+    if (!routineRef.current) return;
+    setDownloading(true);
 
-  try {
-    const { domToPng } = await import('modern-screenshot');
+    try {
+      const { domToPng } = await import("modern-screenshot");
 
-    const el = routineRef.current;
+      const el = routineRef.current;
 
-    // expand table fully
-    const table = el.querySelector('.overflow-x-auto') as HTMLElement | null;
-    const saved = {
-      elW: el.style.width,
-      elMax: el.style.maxWidth,
-      elOver: el.style.overflow,
-      tOver: table?.style.overflow ?? '',
-      tW: table?.style.width ?? '',
-    };
+      const table = el.querySelector(
+        ".overflow-x-auto",
+      ) as HTMLElement | null;
+      const saved = {
+        elW: el.style.width,
+        elMax: el.style.maxWidth,
+        elOver: el.style.overflow,
+        tOver: table?.style.overflow ?? "",
+        tW: table?.style.width ?? "",
+      };
 
-    el.style.width    = 'max-content';
-    el.style.maxWidth = 'none';
-    el.style.overflow = 'visible';
-    if (table) {
-      table.style.overflow = 'visible';
-      table.style.width    = 'max-content';
+      el.style.width = "max-content";
+      el.style.maxWidth = "none";
+      el.style.overflow = "visible";
+      if (table) {
+        table.style.overflow = "visible";
+        table.style.width = "max-content";
+      }
+
+      await new Promise((r) => setTimeout(r, 200));
+
+      const png = await domToPng(el, {
+        scale: 2,
+        quality: 1,
+        backgroundColor: "#ffffff",
+        width: el.scrollWidth,
+        height: el.scrollHeight,
+      });
+
+      el.style.width = saved.elW;
+      el.style.maxWidth = saved.elMax;
+      el.style.overflow = saved.elOver;
+      if (table) {
+        table.style.overflow = saved.tOver;
+        table.style.width = saved.tW;
+      }
+
+      const a = document.createElement("a");
+      a.download = `Routine_${filters.dept}_${filters.batch}_Sec${filters.section}.png`;
+      a.href = png;
+      a.click();
+    } catch (err) {
+      console.error(err);
+      alert("Download failed. Try again.");
+    } finally {
+      setDownloading(false);
     }
-
-    await new Promise((r) => setTimeout(r, 200));
-
-    const png = await domToPng(el, {
-      scale: 2,
-      quality: 1,
-      backgroundColor: '#ffffff',
-      width:  el.scrollWidth,
-      height: el.scrollHeight,
-    });
-
-    // restore
-    el.style.width    = saved.elW;
-    el.style.maxWidth = saved.elMax;
-    el.style.overflow = saved.elOver;
-    if (table) {
-      table.style.overflow = saved.tOver;
-      table.style.width    = saved.tW;
-    }
-
-    // download
-    const a    = document.createElement('a');
-    a.download = `Routine_${filters.dept}_${filters.batch}_Sec${filters.section}.png`;
-    a.href     = png;
-    a.click();
-
-  } catch (err) {
-    console.error(err);
-    alert('Download failed. Try again.');
-  } finally {
-    setDownloading(false);
-  }
-};
+  };
 
   const todayName = new Date().toLocaleDateString("en-US", {
     weekday: "long",
   }) as (typeof DAYS)[number];
 
-  // ── schedule card (shared UI component) ──────────────────────────────────
-  const ScheduleCard = ({ schedule }: { schedule: ProcessedSchedule }) => {
+  // ── Schedule Card Component ───────────────────────────────────────────────
+  const ScheduleCard = ({
+    schedule,
+    exception,
+  }: {
+    schedule: ProcessedSchedule;
+    exception?: ScheduleException | null;
+  }) => {
     const cs = getCardStyle(schedule.class_type);
-    const isLab = schedule.class_type === "Lab";
+
+    // Cancelled state
+    if (exception?.type === "cancelled") {
+      return (
+        <div className="rounded-xl overflow-hidden border-2 border-dashed border-red-300 bg-red-50 opacity-75">
+          <div className="h-1 w-full bg-red-400" />
+          <div className="p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-red-500 text-sm">❌</span>
+              <p className="font-bold text-sm text-red-700 line-through leading-snug break-words">
+                {schedule.course_name}
+              </p>
+            </div>
+            {schedule.course_code && (
+              <p className="text-xs text-red-400 mb-1">{schedule.course_code}</p>
+            )}
+            {schedule.teacher_name && (
+              <div className="flex items-start gap-1.5 text-xs text-red-400 mb-1">
+                <svg
+                  className="w-3.5 h-3.5 flex-shrink-0 mt-px"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+                <span className="line-through">{schedule.teacher_name}</span>
+              </div>
+            )}
+            <div className="bg-red-100 border border-red-200 rounded-lg px-2.5 py-1.5 mt-2">
+              <p className="text-xs font-semibold text-red-600 flex items-center gap-1">
+                <span>❌</span>
+                <span>Class Cancelled</span>
+              </p>
+              {exception.reason && (
+                <p className="text-xs text-red-500 mt-0.5 leading-snug">
+                  {exception.reason}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Normal state (with optional notice)
     return (
       <div
         className={`rounded-xl overflow-hidden shadow-sm ${cs.wrap}
@@ -617,6 +714,16 @@ const handleDownload = async () => {
       >
         <div className={`h-1 w-full ${cs.strip}`} />
         <div className="p-3">
+          {/* Notice Badge */}
+          {exception?.type === "notice" && exception.text && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5 mb-2">
+              <p className="text-xs font-semibold text-amber-700 flex items-center gap-1 leading-snug">
+                <span className="flex-shrink-0">📢</span>
+                <span>{exception.text}</span>
+              </p>
+            </div>
+          )}
+
           <p
             className={`font-bold text-sm leading-snug mb-1 break-words ${cs.title}`}
           >
@@ -628,7 +735,9 @@ const handleDownload = async () => {
             </p>
           )}
           {schedule.teacher_name && (
-            <div className={`flex items-start gap-1.5 text-xs mb-1 ${cs.meta}`}>
+            <div
+              className={`flex items-start gap-1.5 text-xs mb-1 ${cs.meta}`}
+            >
               <svg
                 className="w-3.5 h-3.5 flex-shrink-0 mt-px"
                 fill="none"
@@ -688,8 +797,7 @@ const handleDownload = async () => {
                   d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              {schedule.slotSpan * 1.5}h · Slot{" "}
-              {schedule.sessionSlots.join("–")}
+              {schedule.slotSpan * 1.5}h · Slot {schedule.sessionSlots.join("–")}
             </div>
           )}
           <div className="flex flex-wrap gap-1 mt-2">
@@ -718,10 +826,7 @@ const handleDownload = async () => {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <div
-            className="animate-spin rounded-full h-12 w-12 border-b-2
-          border-blue-600 mx-auto"
-          />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
           <p className="mt-4 text-gray-500 text-sm">Loading routines...</p>
         </div>
       </div>
@@ -833,8 +938,47 @@ const handleDownload = async () => {
             />
           )}
         </div>
+
+        {/* Date picker for exceptions */}
         {showRoutine && (
-          <div className="flex flex-wrap gap-2 sm:gap-3 pt-3 border-t border-gray-100">
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">
+              📅 Check exceptions for date:
+            </label>
+            <div className="flex items-center gap-3 flex-wrap">
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm
+                  focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                  outline-none transition-shadow"
+              />
+              {routineExceptions.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+                  <span className="text-xs font-medium text-red-600">
+                    {routineExceptions.length} exception
+                    {routineExceptions.length > 1 ? "s" : ""} found
+                  </span>
+                </div>
+              )}
+              {routineExceptions.length === 0 && (
+                <span className="text-xs text-gray-400 flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-green-400 inline-block" />
+                  No exceptions for this date
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              Cancelled classes and notices for this date will be shown on the
+              routine
+            </p>
+          </div>
+        )}
+
+        {showRoutine && (
+          <div className="flex flex-wrap gap-2 sm:gap-3 pt-3 border-t border-gray-100 mt-3">
             <Button onClick={handleDownload} disabled={downloading}>
               {downloading ? (
                 <span className="flex items-center gap-2 text-sm">
@@ -913,17 +1057,19 @@ const handleDownload = async () => {
               Class Schedule
             </p>
             <div className="flex justify-center gap-2 flex-wrap">
-              {[filters.dept, filters.batch, `Section ${filters.section}`].map(
-                (t) => (
-                  <span
-                    key={t}
-                    className="bg-white/10 border border-white/15 text-white
+              {[
+                filters.dept,
+                filters.batch,
+                `Section ${filters.section}`,
+              ].map((t) => (
+                <span
+                  key={t}
+                  className="bg-white/10 border border-white/15 text-white
                   text-xs sm:text-sm font-medium px-3 sm:px-4 py-1 sm:py-1.5 rounded-lg"
-                  >
-                    {t}
-                  </span>
-                ),
-              )}
+                >
+                  {t}
+                </span>
+              ))}
             </div>
           </div>
 
@@ -940,8 +1086,8 @@ const handleDownload = async () => {
           ) : (
             <>
               {/* ════════════════════════════════════════
-    MOBILE VIEW — Same table, horizontal scroll
-    ════════════════════════════════════════ */}
+                  MOBILE VIEW — horizontal scroll table
+                  ════════════════════════════════════════ */}
               <div className="block lg:hidden">
                 {/* Legend */}
                 <div className="bg-slate-50 border-b border-slate-200 px-3 py-2">
@@ -958,6 +1104,10 @@ const handleDownload = async () => {
                       {
                         cls: "bg-violet-50 border-l-2 border-l-violet-500 border border-violet-200",
                         label: "Multi-slot",
+                      },
+                      {
+                        cls: "bg-red-50 border-l-2 border-l-red-400 border border-dashed border-red-300",
+                        label: "Cancelled",
                       },
                     ].map(({ cls, label }) => (
                       <div key={label} className="flex items-center gap-1.5">
@@ -983,7 +1133,7 @@ const handleDownload = async () => {
                 {/* Scroll hint */}
                 <div
                   className="flex items-center justify-center gap-1.5 py-1.5
-    bg-slate-100 border-b border-slate-200"
+                  bg-slate-100 border-b border-slate-200"
                 >
                   <svg
                     className="w-3.5 h-3.5 text-slate-400"
@@ -1003,7 +1153,7 @@ const handleDownload = async () => {
                   </span>
                 </div>
 
-                {/* The exact same table as desktop */}
+                {/* Table */}
                 <div className="overflow-x-auto">
                   <table
                     className="border-collapse"
@@ -1014,11 +1164,10 @@ const handleDownload = async () => {
                   >
                     <thead>
                       <tr>
-                        {/* Time header */}
                         <th
                           className="bg-slate-800 text-white border border-slate-700
-            px-3 py-3 text-left text-[11px] font-bold uppercase tracking-wider
-            sticky left-0 z-20"
+                          px-3 py-3 text-left text-[11px] font-bold uppercase tracking-wider
+                          sticky left-0 z-20"
                           style={{ minWidth: "110px", width: "110px" }}
                         >
                           <div className="flex items-center gap-1.5">
@@ -1038,16 +1187,14 @@ const handleDownload = async () => {
                             <span>Time</span>
                           </div>
                         </th>
-
-                        {/* Day headers */}
                         {DAYS.map((day) => {
                           const isToday = day === todayName;
                           return (
                             <th
                               key={day}
                               className={`border border-slate-700 px-2 py-3 text-center
-                  text-[11px] font-bold uppercase tracking-wider
-                  ${isToday ? "bg-amber-500 text-white" : "bg-slate-800 text-white"}`}
+                              text-[11px] font-bold uppercase tracking-wider
+                              ${isToday ? "bg-amber-500 text-white" : "bg-slate-800 text-white"}`}
                               style={{ minWidth: "160px" }}
                             >
                               <div className="flex items-center justify-center gap-1">
@@ -1059,7 +1206,7 @@ const handleDownload = async () => {
                               {isToday && (
                                 <span
                                   className="text-[9px] bg-white/20 px-1.5 py-0.5
-                    rounded-full font-medium normal-case mt-0.5 inline-block"
+                                  rounded-full font-medium normal-case mt-0.5 inline-block"
                                 >
                                   Today
                                 </span>
@@ -1069,21 +1216,20 @@ const handleDownload = async () => {
                         })}
                       </tr>
                     </thead>
-
                     <tbody>
                       {TIME_SLOTS.map((slot, ri) => (
                         <tr key={slot.id}>
                           {/* Time cell — sticky */}
                           <td
                             className="border border-slate-200 p-0 align-middle
-              sticky left-0 z-10 bg-slate-800"
+                            sticky left-0 z-10 bg-slate-800"
                             style={{ minWidth: "110px", width: "110px" }}
                           >
                             <div className="px-3 py-3">
                               <div
                                 className="inline-flex items-center gap-1
-                  bg-blue-600 text-white text-[10px] font-bold
-                  px-2 py-0.5 rounded-full mb-2 shadow-sm"
+                                bg-blue-600 text-white text-[10px] font-bold
+                                px-2 py-0.5 rounded-full mb-2 shadow-sm"
                               >
                                 <svg
                                   className="w-2.5 h-2.5"
@@ -1109,7 +1255,7 @@ const handleDownload = async () => {
                               <div className="mt-1.5">
                                 <span
                                   className="text-[9px] text-slate-500 bg-slate-700
-                    px-1.5 py-0.5 rounded-full border border-slate-600"
+                                  px-1.5 py-0.5 rounded-full border border-slate-600"
                                 >
                                   85 min
                                 </span>
@@ -1134,27 +1280,34 @@ const handleDownload = async () => {
                               <td
                                 key={day}
                                 className={`border px-1.5 py-1.5 align-top
-                    ${
-                      isToday
-                        ? "border-amber-200 bg-amber-50/30"
-                        : `border-slate-200 ${rowBg}`
-                    }`}
+                                ${
+                                  isToday
+                                    ? "border-amber-200 bg-amber-50/30"
+                                    : `border-slate-200 ${rowBg}`
+                                }`}
                                 style={{ minWidth: "160px" }}
                               >
                                 {display.length > 0 ? (
                                   <div className="space-y-1.5">
                                     {display.map((s) => (
-                                      <ScheduleCard key={s.id} schedule={s} />
+                                      <ScheduleCard
+                                        key={s.id}
+                                        schedule={s}
+                                        exception={getExceptionForSchedule(
+                                          s.id,
+                                        )}
+                                      />
                                     ))}
                                   </div>
                                 ) : cont.length > 0 ? (
                                   <div
                                     className="flex flex-col items-center justify-center
-                      min-h-[70px] text-violet-400"
+                                    min-h-[70px] text-violet-400"
                                   >
                                     <div
                                       className="w-7 h-7 rounded-full bg-violet-100
-                        border border-violet-200 flex items-center justify-center mb-1"
+                                      border border-violet-200 flex items-center
+                                      justify-center mb-1"
                                     >
                                       <svg
                                         className="w-3.5 h-3.5"
@@ -1211,6 +1364,10 @@ const handleDownload = async () => {
                         cls: "bg-violet-50 border-l-2 border-l-violet-500 border border-violet-200",
                         label: "Multi-slot",
                       },
+                      {
+                        cls: "bg-red-50 border-l-2 border-l-red-400 border border-dashed border-red-300",
+                        label: "Cancelled",
+                      },
                     ].map(({ cls, label }) => (
                       <div key={label} className="flex items-center gap-1.5">
                         <span
@@ -1257,8 +1414,8 @@ const handleDownload = async () => {
                             <th
                               key={day}
                               className={`border border-slate-700 px-3 py-3 text-center
-                                text-xs font-bold uppercase tracking-wider
-                                ${isToday ? "bg-amber-500 text-white" : "bg-slate-800 text-white"}`}
+                              text-xs font-bold uppercase tracking-wider
+                              ${isToday ? "bg-amber-500 text-white" : "bg-slate-800 text-white"}`}
                               style={{ minWidth: "220px" }}
                             >
                               <div className="flex items-center justify-center gap-1.5">
@@ -1347,17 +1504,23 @@ const handleDownload = async () => {
                               <td
                                 key={day}
                                 className={`border px-2 py-2 align-top
-                                  ${
-                                    isToday
-                                      ? "border-amber-200 bg-amber-50/30"
-                                      : `border-slate-200 ${rowBg}`
-                                  }`}
+                                ${
+                                  isToday
+                                    ? "border-amber-200 bg-amber-50/30"
+                                    : `border-slate-200 ${rowBg}`
+                                }`}
                                 style={{ minWidth: "220px" }}
                               >
                                 {display.length > 0 ? (
                                   <div className="space-y-2">
                                     {display.map((s) => (
-                                      <ScheduleCard key={s.id} schedule={s} />
+                                      <ScheduleCard
+                                        key={s.id}
+                                        schedule={s}
+                                        exception={getExceptionForSchedule(
+                                          s.id,
+                                        )}
+                                      />
                                     ))}
                                   </div>
                                 ) : cont.length > 0 ? (
@@ -1433,6 +1596,15 @@ const handleDownload = async () => {
                         label: "Slots",
                         val: selectedSchedules.length,
                       },
+                      ...(routineExceptions.length > 0
+                        ? [
+                            {
+                              dot: "bg-red-400",
+                              label: "Exceptions",
+                              val: routineExceptions.length,
+                            },
+                          ]
+                        : []),
                     ].map(({ dot, label, val }) => (
                       <div key={label} className="flex items-center gap-1.5">
                         <div className={`w-2 h-2 rounded-full ${dot}`} />
